@@ -7,6 +7,8 @@ model.eval().to("cuda" if torch.cuda.is_available() else "cpu")
 
 # Transcribe the audio file
 # melody_only=True is required for YuE2 covers to omit chord symbols
-result = model.transcribe("chrono_trigger-wind_scene.mp3", output_dir="cover-score", melody_only=True)
+result = model.transcribe("chrono_trigger-wind_scene.mp3",
+                          output_dir="cover-score",
+                          melody_only=True)
 
 print("Success! ABC score saved to cover-score/score.abc")
