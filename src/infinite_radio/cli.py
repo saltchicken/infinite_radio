@@ -9,20 +9,50 @@ import sounddevice as sd
 import soundfile as sf
 from pathlib import Path
 from yue2 import YuE2Pipeline
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+class ConfigHandler(FileSystemEventHandler):
+    def __init__(self, request_path, shared_state, pause_event):
+        self.request_path = request_path.resolve()
+        self.shared_state = shared_state
+        self.pause_event = pause_event
+
+    def on_any_event(self, event):
+        # Trigger on modifications or atomic replace events from text editors
+        if not event.is_directory and Path(event.src_path).resolve() == self.request_path:
+            # Small delay to ensure text editors finish writing before we read
+            time.sleep(0.05)
+            self.update_config()
+
+    def update_config(self):
+        try:
+            data = json.loads(self.request_path.read_text(encoding="utf-8"))
+            self.shared_state.update(data)
+            if self.shared_state.get("pause", False):
+                self.pause_event.set()
+            else:
+                self.pause_event.clear()
+        except Exception:
+            # Ignore errors if the file is caught mid-write or has invalid JSON
+            pass
 
 def config_watcher(request_path, shared_state, pause_event, shutdown_event):
-    while not shutdown_event.is_set():
-        try:
-            data = json.loads(request_path.read_text(encoding="utf-8"))
-            shared_state.update(data)
-            if shared_state.get("pause", False):
-                pause_event.set()
-            else:
-                pause_event.clear()
-        except Exception:
-            pass 
-        # Use wait instead of sleep so it can break immediately on shutdown
-        shutdown_event.wait(0.5)
+    event_handler = ConfigHandler(request_path, shared_state, pause_event)
+    observer = Observer()
+    
+    # Watch the directory containing song.json rather than the file itself 
+    # to catch atomic saves (where editors delete and recreate the file)
+    observer.schedule(event_handler, path=str(request_path.parent.resolve()), recursive=False)
+    observer.start()
+    
+    try:
+        # Keep the thread alive until shutdown is signaled
+        while not shutdown_event.is_set():
+            shutdown_event.wait(1.0)
+    finally:
+        observer.stop()
+        observer.join()
 
 def audio_player(play_queue, pause_event, shutdown_event, crossfade_sec=6.0):
     stream = None
@@ -146,7 +176,6 @@ def main():
                 current_output_dir = args.output / f"track_{track_number:03d}"
                 current_output_dir.mkdir(exist_ok=True)
                 
-                # If pipeline throws an error or is interrupted, the outer try/except handles it
                 song = pipe(**active_request)
                 song.save_artifacts(current_output_dir)
                 audio_path = current_output_dir / "audio.flac"
@@ -160,10 +189,7 @@ def main():
     except Exception as e:
         print(f"\n\n[Main] An unexpected error occurred: {e}")
     finally:
-        # Trigger shutdown for background threads
         shutdown_event.set()
-        
-        # Unpause just in case the player thread is stuck in a paused loop
         pause_event.clear()
         
         print("[Main] Waiting for background processes to exit...")
