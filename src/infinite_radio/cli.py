@@ -196,6 +196,7 @@ def main():
                 current_output_dir.mkdir(exist_ok=True)
                 
                 song = pipe(**active_request)
+                # song = pipe(**active_request, best_of=3)
                 song.save_artifacts(current_output_dir)
                 audio_path = current_output_dir / "audio.flac"
                 
