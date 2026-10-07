@@ -13,10 +13,11 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 class ConfigHandler(FileSystemEventHandler):
-    def __init__(self, request_path, shared_state, pause_event):
+    def __init__(self, request_path, shared_state, pause_event, config_lock):
         self.request_path = request_path.resolve()
         self.shared_state = shared_state
         self.pause_event = pause_event
+        self.config_lock = config_lock
 
     def on_any_event(self, event):
         # Trigger on modifications or atomic replace events from text editors
@@ -28,7 +29,10 @@ class ConfigHandler(FileSystemEventHandler):
     def update_config(self):
         try:
             data = json.loads(self.request_path.read_text(encoding="utf-8"))
-            self.shared_state.update(data)
+            # Safely write to shared_state
+            with self.config_lock:
+                self.shared_state.update(data)
+                
             if self.shared_state.get("pause", False):
                 self.pause_event.set()
             else:
@@ -37,8 +41,8 @@ class ConfigHandler(FileSystemEventHandler):
             # Ignore errors if the file is caught mid-write or has invalid JSON
             pass
 
-def config_watcher(request_path, shared_state, pause_event, shutdown_event):
-    event_handler = ConfigHandler(request_path, shared_state, pause_event)
+def config_watcher(request_path, shared_state, pause_event, shutdown_event, config_lock):
+    event_handler = ConfigHandler(request_path, shared_state, pause_event, config_lock)
     observer = Observer()
     
     # Watch the directory containing song.json rather than the file itself 
@@ -80,17 +84,16 @@ def audio_player(play_queue, pause_event, shutdown_event, crossfade_sec=6.0):
     try:
         while not shutdown_event.is_set():
             try:
-                # Use a timeout so we can periodically check shutdown_event
-                audio_path = play_queue.get(timeout=1.0)
+                # Get the pre-decoded numpy array to prevent buffer underruns
+                data, fs, track_name = play_queue.get(timeout=1.0)
             except queue.Empty:
                 continue
-
-            data, fs = sf.read(audio_path, dtype="float32")
-            
-            if data.ndim == 1:
-                data = np.column_stack([data, data])
                 
-            fade_samples = int(crossfade_sec * fs)
+            # Safely cap fade_samples so short tracks don't cause array indexing errors
+            track_length = len(data)
+            max_fade = track_length // 2 
+            fade_samples = min(int(crossfade_sec * fs), max_fade)
+            
             chunk_size = int(fs * 0.25) 
             
             if stream is None:
@@ -98,17 +101,29 @@ def audio_player(play_queue, pause_event, shutdown_event, crossfade_sec=6.0):
                     samplerate=fs, channels=data.shape[1], dtype="float32"
                 )
                 stream.start()
+            elif stream.samplerate != fs:
+                # Handle sample rate changes safely if the AI ever outputs one
+                stream.stop()
+                stream.close()
+                stream = sd.OutputStream(
+                    samplerate=fs, channels=data.shape[1], dtype="float32"
+                )
+                stream.start()
 
-            track_name = audio_path.parent.name.split('_')[-1]
             print(f"\n[Player] Transitioning into Track {track_name}...")
 
             t = np.linspace(0.0, 1.0, fade_samples, dtype=np.float32)[:, None]
-            fade_out = np.cos(0.5 * np.pi * t)
-            fade_in = np.sin(0.5 * np.pi * t)
+            
+            # Linear crossfade prevents digital clipping
+            fade_out = 1.0 - t
+            fade_in = t
 
             if current_tail is not None:
+                # Handle cases where the previous tail was longer than the current capped fade_samples
+                tail = current_tail[-fade_samples:] if len(current_tail) > fade_samples else current_tail
+                
                 head = data[:fade_samples]
-                transition = (current_tail * fade_out) + (head * fade_in)
+                transition = (tail * fade_out) + (head * fade_in)
                 if not stream_write_interruptible(transition, chunk_size):
                     break
                 body = data[fade_samples:-fade_samples]
@@ -141,9 +156,10 @@ def main():
     shared_state = json.loads(args.request.read_text(encoding="utf-8"))
     pause_event = threading.Event()
     shutdown_event = threading.Event()
+    config_lock = threading.Lock()
     play_queue = queue.Queue()
 
-    watcher_thread = threading.Thread(target=config_watcher, args=(args.request, shared_state, pause_event, shutdown_event), daemon=True)
+    watcher_thread = threading.Thread(target=config_watcher, args=(args.request, shared_state, pause_event, shutdown_event, config_lock), daemon=True)
     player_thread = threading.Thread(target=audio_player, args=(play_queue, pause_event, shutdown_event, args.crossfade), daemon=True)
     
     watcher_thread.start()
@@ -169,7 +185,10 @@ def main():
                     
                 print(f"\n--- Generating Track {track_number} ---")
                 
-                active_request = shared_state.copy()
+                # Safely copy the state
+                with config_lock:
+                    active_request = shared_state.copy()
+                    
                 active_request["seed"] = random.randint(0, 2**32 - 1)
                 active_request.pop("pause", None)
                 
@@ -180,8 +199,17 @@ def main():
                 song.save_artifacts(current_output_dir)
                 audio_path = current_output_dir / "audio.flac"
                 
-                print(f"Track {track_number} rendered! Queued for next crossfade.")
-                play_queue.put(audio_path)
+                print(f"Track {track_number} rendered! Decoding audio into memory...")
+                
+                # Pre-read the file into RAM in the main thread to prevent underruns
+                data, fs = sf.read(audio_path, dtype="float32")
+                if data.ndim == 1:
+                    data = np.column_stack([data, data])
+                    
+                track_name = audio_path.parent.name.split('_')[-1]
+                play_queue.put((data, fs, track_name))
+                print(f"Track {track_number} queued for next crossfade.")
+                
                 track_number += 1
                 
     except KeyboardInterrupt:
