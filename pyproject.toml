@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "infinite-radio"
+version = "0.1.0"
+description = "An infinite AI music generation radio using YuE2"
+requires-python = ">=3.10"
+dependencies = [
+    "sounddevice",
+    "soundfile",
+    "numpy",
+    "accelerate",
+    "mir_eval",
+    "pretty_midi",
+    "mido",
+    "scipy",
+    "yue2-infer @ git+https://github.com/multimodal-art-projection/YuE.git",
+    "torch",
+    "torchaudio",
+]
+
+[project.scripts]
+infinite-radio = "infinite_radio.cli:main"

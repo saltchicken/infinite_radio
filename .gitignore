@@ -1,0 +1,11 @@
+__pycache__
+*.egg-info
+
+outputs/
+cover-score/
+
+*.abc
+*.lab
+*.mid
+*.tsv
+*.mp3
