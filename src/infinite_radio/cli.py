@@ -88,10 +88,11 @@ class AudioStreamHandler(BaseHTTPRequestHandler):
         pass  # Suppress HTTP logs to keep the console clean
 
 class ConfigHandler(FileSystemEventHandler):
-    def __init__(self, request_path, shared_state, pause_event, config_lock):
+    def __init__(self, request_path, shared_state, pause_event, skip_event, config_lock):
         self.request_path = request_path.resolve()
         self.shared_state = shared_state
         self.pause_event = pause_event
+        self.skip_event = skip_event
         self.config_lock = config_lock
 
     def on_any_event(self, event):
@@ -104,6 +105,14 @@ class ConfigHandler(FileSystemEventHandler):
             data = json.loads(self.request_path.read_text(encoding="utf-8"))
             with self.config_lock:
                 self.shared_state.update(data)
+            
+            # Trigger skip and auto-reset the JSON to false to prevent endless skipping
+            if data.get("skip", False):
+                self.skip_event.set()
+                data["skip"] = False
+                with open(self.request_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2)
+
             if self.shared_state.get("pause", False):
                 self.pause_event.set()
             else:
@@ -111,8 +120,8 @@ class ConfigHandler(FileSystemEventHandler):
         except Exception:
             pass
 
-def config_watcher(request_path, shared_state, pause_event, shutdown_event, config_lock):
-    event_handler = ConfigHandler(request_path, shared_state, pause_event, config_lock)
+def config_watcher(request_path, shared_state, pause_event, skip_event, shutdown_event, config_lock):
+    event_handler = ConfigHandler(request_path, shared_state, pause_event, skip_event, config_lock)
     observer = Observer()
     observer.schedule(event_handler, path=str(request_path.parent.resolve()), recursive=False)
     observer.start()
@@ -123,7 +132,7 @@ def config_watcher(request_path, shared_state, pause_event, shutdown_event, conf
         observer.stop()
         observer.join()
 
-def audio_player(play_queue, pause_event, shutdown_event, crossfade_sec=6.0, disable_local=False):
+def audio_player(play_queue, pause_event, skip_event, shutdown_event, crossfade_sec=6.0, disable_local=False):
     stream = None
     current_tail = None
     global STREAM_AUDIO_FORMAT
@@ -131,7 +140,12 @@ def audio_player(play_queue, pause_event, shutdown_event, crossfade_sec=6.0, dis
     def stream_write_interruptible(audio_data, chunk_frames, current_fs):
         for i in range(0, len(audio_data), chunk_frames):
             if shutdown_event.is_set():
-                return False
+                return "SHUTDOWN"
+            
+            if skip_event.is_set():
+                skip_event.clear()
+                print("\n[Player] ⏭️ Skipping current track...")
+                return "SKIP"
 
             while pause_event.is_set() and not shutdown_event.is_set():
                 if stream and stream.active:
@@ -140,7 +154,7 @@ def audio_player(play_queue, pause_event, shutdown_event, crossfade_sec=6.0, dis
                 shutdown_event.wait(0.1)
 
             if shutdown_event.is_set():
-                return False
+                return "SHUTDOWN"
 
             chunk = audio_data[i:i + chunk_frames]
 
@@ -163,7 +177,7 @@ def audio_player(play_queue, pause_event, shutdown_event, crossfade_sec=6.0, dis
                 # If local hardware audio is disabled, manually pace the loop based on sample rate
                 time.sleep(len(chunk) / current_fs)
 
-        return True
+        return "OK"
 
     try:
         while not shutdown_event.is_set():
@@ -202,15 +216,26 @@ def audio_player(play_queue, pause_event, shutdown_event, crossfade_sec=6.0, dis
                 tail = current_tail[-fade_samples:] if len(current_tail) > fade_samples else current_tail
                 head = data[:fade_samples]
                 transition = (tail * fade_out) + (head * fade_in)
-                if not stream_write_interruptible(transition, chunk_size, fs):
-                    break
+                
+                status = stream_write_interruptible(transition, chunk_size, fs)
+                if status == "SHUTDOWN": break
+                if status == "SKIP":
+                    current_tail = None # Clear tail so the next song starts clean
+                    play_queue.task_done()
+                    continue
+
                 body = data[fade_samples:-fade_samples]
             else:
                 body = data[:-fade_samples]
 
             current_tail = data[-fade_samples:]
-            if not stream_write_interruptible(body, chunk_size, fs):
-                break
+            
+            status = stream_write_interruptible(body, chunk_size, fs)
+            if status == "SHUTDOWN": break
+            if status == "SKIP":
+                current_tail = None
+                play_queue.task_done()
+                continue
 
             play_queue.task_done()
 
@@ -240,15 +265,16 @@ def main():
 
     shared_state = json.loads(args.request.read_text(encoding="utf-8"))
     pause_event = threading.Event()
+    skip_event = threading.Event()
     shutdown_event = threading.Event()
     config_lock = threading.Lock()
     play_queue = queue.Queue()
 
     watcher_thread = threading.Thread(target=config_watcher,
-                                      args=(args.request, shared_state, pause_event, shutdown_event, config_lock),
+                                      args=(args.request, shared_state, pause_event, skip_event, shutdown_event, config_lock),
                                       daemon=True)
     player_thread = threading.Thread(target=audio_player,
-                                     args=(play_queue, pause_event, shutdown_event, args.crossfade, args.disable_local),
+                                     args=(play_queue, pause_event, skip_event, shutdown_event, args.crossfade, args.disable_local),
                                      daemon=True)
     http_thread = threading.Thread(target=start_http_server, 
                                    args=(args.stream_port,), 
@@ -290,6 +316,7 @@ def main():
 
                 active_request["seed"] = random.randint(0, 2**32 - 1)
                 active_request.pop("pause", None)
+                active_request.pop("skip", None)  # Prevent kwargs error in YuE pipeline
 
                 current_output_dir = args.output / f"track_{track_number:03d}"
                 current_output_dir.mkdir(exist_ok=True)
