@@ -1,9 +1,17 @@
 {
   "pause": false,
-  "id": "synth",
-  "style": "cinematic ambient, 1980s electronic, cyberpunk soundtrack, analog synthesizers, lush sweeping pads, expressive synth brass, massive cavernous reverb, melancholic, dystopian sci-fi noir, slow tempo, ethereal, strictly instrumental.",
-  "lyrics": "[Intro]\n[Verse]\n[Chorus]\n[Verse]\n[Outro]",
+  "skip": false,
+  "id": "acid_techno_warehouse",
+  "style": "90 BPM, acid techno, hypnotic, Roland TB-303 squelch, resonant acid bassline, relentless four on the floor kick drum, underground warehouse rave, dark, aggressive, BGM, purely instrumental, zero vocals.",
+  "lyrics": [
+    "[Instrumental Intro]\n[Acid Bass Solo]\n[Instrumental Build-up]\n[Instrumental Drop]\n[Instrumental Outro]",
+    "[Atmospheric Intro]\n[Percussion Build-up]\n[Heavy Acid Drop]\n[Breakdown]\n[Outro]",
+    "[Fast Intro]\n[303 Squelch Solo]\n[Climax]\n[Beat Drop]\n[Fade Out]",
+    "[Minimal Intro]\n[Hi-hat Roll]\n[Acid Sequence]\n[Hard Kick Drop]\n[Second Drop]\n[Instrumental Outro]",
+    "[Pulsing Intro]\n[Filter Sweep]\n[303 Acid Line]\n[Peak Time Drop]\n[Hypnotic Breakdown]\n[Fade Out]",
+    "[Dark Intro]\n[Distorted Kick]\n[Rave Stabs]\n[Aggressive Drop]\n[Resonant Squelch]\n[Echoing Outro]",
+    "[Slow Build]\n[Rhythmic Synth]\n[Acid Bass Loop]\n[Trance-like Breakdown]\n[Final Climax]\n[Sudden End]"
+  ],
   "cot": "full",
-  "seed": 831003
+  "seed": 303303
 }
-

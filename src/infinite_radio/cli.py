@@ -318,8 +318,17 @@ def main():
                 active_request.pop("pause", None)
                 active_request.pop("skip", None)  # Prevent kwargs error in YuE pipeline
 
+                # If lyrics is a list of options, pick one randomly
+                if isinstance(active_request.get("lyrics"), list):
+                    active_request["lyrics"] = random.choice(active_request["lyrics"])
+
                 current_output_dir = args.output / f"track_{track_number:03d}"
                 current_output_dir.mkdir(exist_ok=True)
+
+                # Save the exact parameters used for this specific track
+                metadata_path = current_output_dir / "metadata.json"
+                with open(metadata_path, "w", encoding="utf-8") as f:
+                    json.dump(active_request, f, indent=2)
 
                 song = pipe(**active_request)
                 song.save_artifacts(current_output_dir)
