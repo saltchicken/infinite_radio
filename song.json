@@ -2,15 +2,64 @@
   "pause": false,
   "skip": false,
   "id": "acid_techno_warehouse",
-  "style": "90 BPM, acid techno, hypnotic, Roland TB-303 squelch, resonant acid bassline, relentless four on the floor kick drum, underground warehouse rave, dark, aggressive, BGM, purely instrumental, zero vocals.",
+  "choices": {
+    "bpm": [90, 110, 130, 140]
+  },
+  "style": "{bpm}, acid techno, hypnotic, Roland TB-303 squelch, resonant acid bassline, relentless four on the floor kick drum, underground warehouse rave, dark, aggressive, BGM, purely instrumental, zero vocals.",
   "lyrics": [
-    "[Instrumental Intro]\n[Acid Bass Solo]\n[Instrumental Build-up]\n[Instrumental Drop]\n[Instrumental Outro]",
-    "[Atmospheric Intro]\n[Percussion Build-up]\n[Heavy Acid Drop]\n[Breakdown]\n[Outro]",
-    "[Fast Intro]\n[303 Squelch Solo]\n[Climax]\n[Beat Drop]\n[Fade Out]",
-    "[Minimal Intro]\n[Hi-hat Roll]\n[Acid Sequence]\n[Hard Kick Drop]\n[Second Drop]\n[Instrumental Outro]",
-    "[Pulsing Intro]\n[Filter Sweep]\n[303 Acid Line]\n[Peak Time Drop]\n[Hypnotic Breakdown]\n[Fade Out]",
-    "[Dark Intro]\n[Distorted Kick]\n[Rave Stabs]\n[Aggressive Drop]\n[Resonant Squelch]\n[Echoing Outro]",
-    "[Slow Build]\n[Rhythmic Synth]\n[Acid Bass Loop]\n[Trance-like Breakdown]\n[Final Climax]\n[Sudden End]"
+    [
+      "[Instrumental Intro]",
+      "[Acid Bass Solo]",
+      "[Instrumental Build-up]",
+      "[Instrumental Drop]",
+      "[Instrumental Outro]"
+    ],
+    [
+      "[Atmospheric Intro]",
+      "[Percussion Build-up]",
+      "[Heavy Acid Drop]",
+      "[Breakdown]",
+      "[Outro]"
+    ],
+    [
+      "[Fast Intro]",
+      "[303 Squelch Solo]",
+      "[Climax]",
+      "[Beat Drop]",
+      "[Fade Out]"
+    ],
+    [
+      "[Minimal Intro]",
+      "[Hi-hat Roll]",
+      "[Acid Sequence]",
+      "[Hard Kick Drop]",
+      "[Second Drop]",
+      "[Instrumental Outro]"
+    ],
+    [
+      "[Pulsing Intro]",
+      "[Filter Sweep]",
+      "[303 Acid Line]",
+      "[Peak Time Drop]",
+      "[Hypnotic Breakdown]",
+      "[Fade Out]"
+    ],
+    [
+      "[Dark Intro]",
+      "[Distorted Kick]",
+      "[Rave Stabs]",
+      "[Aggressive Drop]",
+      "[Resonant Squelch]",
+      "[Echoing Outro]"
+    ],
+    [
+      "[Slow Build]",
+      "[Rhythmic Synth]",
+      "[Acid Bass Loop]",
+      "[Trance-like Breakdown]",
+      "[Final Climax]",
+      "[Sudden End]"
+    ]
   ],
   "cot": "full",
   "seed": 303303

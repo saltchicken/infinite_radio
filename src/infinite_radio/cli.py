@@ -320,7 +320,21 @@ def main():
 
                 # If lyrics is a list of options, pick one randomly
                 if isinstance(active_request.get("lyrics"), list):
-                    active_request["lyrics"] = random.choice(active_request["lyrics"])
+                    chosen = random.choice(active_request["lyrics"])
+                    # Join the lines with \n if it's a list of lines
+                    if isinstance(chosen, list):
+                        active_request["lyrics"] = "\n".join(chosen)
+                    else:
+                        active_request["lyrics"] = chosen
+
+                # Replace any {placeholders} in the style prompt dynamically
+                if "choices" in active_request:
+                    # Pop it so the pipeline doesn't crash on an unknown kwarg
+                    choices = active_request.pop("choices") 
+                    if isinstance(active_request.get("style"), str):
+                        for key, options in choices.items():
+                            chosen_val = str(random.choice(options))
+                            active_request["style"] = active_request["style"].replace(f"{{{key}}}", chosen_val)
 
                 current_output_dir = args.output / f"track_{track_number:03d}"
                 current_output_dir.mkdir(exist_ok=True)
