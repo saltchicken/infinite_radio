@@ -132,7 +132,7 @@ def config_watcher(request_path, shared_state, pause_event, skip_event, shutdown
         observer.stop()
         observer.join()
 
-def audio_player(play_queue, pause_event, skip_event, shutdown_event, crossfade_sec=6.0, disable_local=False):
+def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event, shutdown_event, crossfade_sec=6.0, disable_local=False):
     stream = None
     current_tail = None
     global STREAM_AUDIO_FORMAT
@@ -156,7 +156,11 @@ def audio_player(play_queue, pause_event, skip_event, shutdown_event, crossfade_
             if shutdown_event.is_set():
                 return "SHUTDOWN"
 
-            chunk = audio_data[i:i + chunk_frames]
+            # Apply volume multiplier dynamically
+            with config_lock:
+                volume = float(shared_state.get("volume", 1.0))
+
+            chunk = audio_data[i:i + chunk_frames] * volume
 
             # 1. Broadcast to HTTP clients
             if STREAM_CLIENTS:
@@ -274,7 +278,7 @@ def main():
                                       args=(args.request, shared_state, pause_event, skip_event, shutdown_event, config_lock),
                                       daemon=True)
     player_thread = threading.Thread(target=audio_player,
-                                     args=(play_queue, pause_event, skip_event, shutdown_event, args.crossfade, args.disable_local),
+                                     args=(play_queue, shared_state, config_lock, pause_event, skip_event, shutdown_event, args.crossfade, args.disable_local),
                                      daemon=True)
     http_thread = threading.Thread(target=start_http_server, 
                                    args=(args.stream_port,), 
@@ -317,6 +321,7 @@ def main():
                 active_request["seed"] = random.randint(0, 2**32 - 1)
                 active_request.pop("pause", None)
                 active_request.pop("skip", None)  # Prevent kwargs error in YuE pipeline
+                active_request.pop("volume", None) # Prevent kwargs error in YuE pipeline
 
                 # If lyrics is a list of options, pick one randomly
                 if isinstance(active_request.get("lyrics"), list):
