@@ -4,88 +4,14 @@ import random
 import threading
 import queue
 import time
-import struct
 import shutil
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
 from pathlib import Path
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from yue2 import YuE2Pipeline
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-
-# --- Streaming Globals ---
-STREAM_CLIENTS = []
-STREAM_AUDIO_FORMAT = {"fs": None, "channels": None}
-
-def create_wav_header(sample_rate, channels, bits_per_sample=16):
-    """Generates an endless WAV header (0xFFFFFFFF size fields) for continuous streaming."""
-    byte_rate = sample_rate * channels * (bits_per_sample // 8)
-    block_align = channels * (bits_per_sample // 8)
-    header = struct.pack('<4sI4s4sIHHIIHH4sI',
-                         b'RIFF', 0xFFFFFFFF, b'WAVE', b'fmt ', 16,
-                         1, channels, sample_rate, byte_rate, block_align,
-                         bits_per_sample, b'data', 0xFFFFFFFF)
-    return header
-
-class AudioStreamHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == '/stream.wav':
-            # Wait until the first track has decoded so we know the sample rate
-            while STREAM_AUDIO_FORMAT['fs'] is None:
-                time.sleep(0.5)
-                
-            self.send_response(200)
-            self.send_header('Content-Type', 'audio/wav')
-            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            self.send_header('Connection', 'keep-alive')
-            self.end_headers()
-
-            # Create a queue for this specific client
-            q = queue.Queue(maxsize=100)
-            STREAM_CLIENTS.append(q)
-
-            try:
-                # Send the initial WAV header
-                self.wfile.write(create_wav_header(STREAM_AUDIO_FORMAT['fs'], STREAM_AUDIO_FORMAT['channels']))
-                
-                # Continuously stream chunks as they are generated
-                while True:
-                    chunk = q.get()
-                    if chunk is None:
-                        break
-                    self.wfile.write(chunk)
-            except Exception:
-                pass  # Client disconnected normally
-            finally:
-                if q in STREAM_CLIENTS:
-                    STREAM_CLIENTS.remove(q)
-        else:
-            # Serve the mobile-friendly web player
-            self.send_response(200)
-            self.send_header('Content-Type', 'text/html; charset=utf-8')
-            self.end_headers()
-            html = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Infinite Radio</title>
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-            </head>
-            <body>
-              <h1>📻 Infinite Radio</h1>
-              <audio controls autoplay>
-                  <source src="/stream.wav" type="audio/wav">
-              </audio>
-              <p>Live stream active</p>
-            </body>
-            </html>
-            """
-            self.wfile.write(html.encode('utf-8'))
-
-    def log_message(self, format, *args):
-        pass  # Suppress HTTP logs to keep the console clean
 
 class ConfigHandler(FileSystemEventHandler):
     def __init__(self, request_path, shared_state, pause_event, skip_event, config_lock):
@@ -132,10 +58,9 @@ def config_watcher(request_path, shared_state, pause_event, skip_event, shutdown
         observer.stop()
         observer.join()
 
-def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event, shutdown_event, crossfade_sec=6.0, disable_local=False):
+def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event, shutdown_event, crossfade_sec=6.0):
     stream = None
     current_tail = None
-    global STREAM_AUDIO_FORMAT
 
     def stream_write_interruptible(audio_data, chunk_frames, current_fs):
         for i in range(0, len(audio_data), chunk_frames):
@@ -162,24 +87,11 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
 
             chunk = audio_data[i:i + chunk_frames] * volume
 
-            # 1. Broadcast to HTTP clients
-            if STREAM_CLIENTS:
-                # Convert float32 [-1.0, 1.0] to int16 PCM bytes
-                pcm_16 = (chunk * 32767.0).clip(-32768, 32767).astype(np.int16).tobytes()
-                for q in list(STREAM_CLIENTS):
-                    try:
-                        q.put_nowait(pcm_16)
-                    except queue.Full:
-                        pass # Drop chunk if a client is lagging behind
-
-            # 2. Local Audio Playback & Pacing
-            if not disable_local and stream is not None:
+            # Local Audio Playback & Pacing
+            if stream is not None:
                 if not stream.active:
                     stream.start()
                 stream.write(chunk) # stream.write automatically blocks, pacing the loop
-            else:
-                # If local hardware audio is disabled, manually pace the loop based on sample rate
-                time.sleep(len(chunk) / current_fs)
 
         return "OK"
 
@@ -187,11 +99,6 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
         while not shutdown_event.is_set():
             try:
                 data, fs, track_name = play_queue.get(timeout=1.0)
-                
-                # Update global format for incoming stream clients
-                STREAM_AUDIO_FORMAT['fs'] = fs
-                STREAM_AUDIO_FORMAT['channels'] = data.shape[1]
-                
             except queue.Empty:
                 continue
 
@@ -200,15 +107,14 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
             fade_samples = min(int(crossfade_sec * fs), max_fade)
             chunk_size = int(fs * 0.25)
 
-            if not disable_local:
-                if stream is None:
-                    stream = sd.OutputStream(samplerate=fs, channels=data.shape[1], dtype="float32")
-                    stream.start()
-                elif stream.samplerate != fs:
-                    stream.stop()
-                    stream.close()
-                    stream = sd.OutputStream(samplerate=fs, channels=data.shape[1], dtype="float32")
-                    stream.start()
+            if stream is None:
+                stream = sd.OutputStream(samplerate=fs, channels=data.shape[1], dtype="float32")
+                stream.start()
+            elif stream.samplerate != fs:
+                stream.stop()
+                stream.close()
+                stream = sd.OutputStream(samplerate=fs, channels=data.shape[1], dtype="float32")
+                stream.start()
 
             print(f"\n[Player] Transitioning into Track {track_name}...")
 
@@ -249,11 +155,6 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
             stream.close()
         print("\n[Player] Audio stream closed and resources released.")
 
-def start_http_server(port):
-    # Bind to 0.0.0.0 so it's accessible over the local network
-    server = ThreadingHTTPServer(('0.0.0.0', port), AudioStreamHandler)
-    server.serve_forever()
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--request", type=Path, default=Path.cwd() / "song.json")
@@ -261,8 +162,6 @@ def main():
     parser.add_argument("--crossfade", type=float, default=6.0)
     parser.add_argument("--model", default="m-a-p/YuE2-3B")
     parser.add_argument("--vae", default="m-a-p/YuE2-Vae")
-    parser.add_argument("--stream-port", type=int, default=8000, help="Port to host the web stream")
-    parser.add_argument("--disable-local", action="store_true", help="Only stream over network; disable local computer speakers")
     args = parser.parse_args()
 
     args.output.mkdir(parents=True, exist_ok=True)
@@ -278,20 +177,14 @@ def main():
                                       args=(args.request, shared_state, pause_event, skip_event, shutdown_event, config_lock),
                                       daemon=True)
     player_thread = threading.Thread(target=audio_player,
-                                     args=(play_queue, shared_state, config_lock, pause_event, skip_event, shutdown_event, args.crossfade, args.disable_local),
+                                     args=(play_queue, shared_state, config_lock, pause_event, skip_event, shutdown_event, args.crossfade),
                                      daemon=True)
-    http_thread = threading.Thread(target=start_http_server, 
-                                   args=(args.stream_port,), 
-                                   daemon=True)
 
     watcher_thread.start()
     player_thread.start()
-    http_thread.start()
 
     print(f"\n==============================================")
-    print(f"📡 Web Stream hosted on port {args.stream_port}")
-    print(f"   From this PC: http://localhost:{args.stream_port}")
-    print(f"   From Phone:   http://<YOUR_LOCAL_IP>:{args.stream_port}")
+    print(f"📻 Infinite Radio Local Playback Started")
     print(f"==============================================\n")
     print("Loading YuE2 Model into VRAM... (This only happens once)")
 
