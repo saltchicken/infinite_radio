@@ -300,7 +300,7 @@ def main():
                 while pause_event.is_set() and not shutdown_event.is_set():
                     shutdown_event.wait(1.0)
 
-                while play_queue.qsize() >= 1 and not shutdown_event.is_set():
+                while play_queue.qsize() >= 3 and not shutdown_event.is_set():
                     shutdown_event.wait(1.0)
 
                 if shutdown_event.is_set():
