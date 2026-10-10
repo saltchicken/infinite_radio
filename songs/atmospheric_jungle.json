@@ -1,0 +1,36 @@
+{
+  "id": "atmospheric_jungle",
+  "choices": {
+    "bpm": [160, 165, 170]
+  },
+  "style": "{bpm}, atmospheric jungle, 90s breakbeat hardcore, chopped amen breaks, deep 808 sub bass, time-stretched pads, nostalgic rave, ethereal, fast-paced, urban night, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Ethereal Pad Intro]",
+      "[Muffled Breakbeat]",
+      "[Heavy Amen Break Drop]",
+      "[Deep Sub Bass Dive]",
+      "[Spaced-out Breakdown]",
+      "[Chopped Break Solo]",
+      "[Fade Out]"
+    ],
+    [
+      "[Nature Sample Intro]",
+      "[Rolling Jungle Drums]",
+      "[Massive Bassline Entry]",
+      "[Time-stretched Synth]",
+      "[Aggressive Drum Edit]",
+      "[Sudden End]"
+    ],
+    [
+      "[Dark Ambient Intro]",
+      "[Fast Snare Rolls]",
+      "[Double-time Break Drop]",
+      "[Atmospheric Bridge]",
+      "[Final Frenetic Climax]",
+      "[Reverb Tail Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 160160
+}

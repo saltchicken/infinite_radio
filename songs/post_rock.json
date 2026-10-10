@@ -1,0 +1,35 @@
+{
+  "id": "instrumental_post_rock",
+  "choices": {
+    "bpm": [70, 80, 90]
+  },
+  "style": "{bpm}, instrumental post-rock, epic slow build, tremolo picked guitars, huge delay, massive wall of sound, emotional, cinematic rock, heavy toms, triumph, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Clean Guitar Intro]",
+      "[Gentle Tom Drum Rhythm]",
+      "[Slow Melancholic Build-up]",
+      "[Distortion Pedal Click]",
+      "[Massive Wall of Sound Climax]",
+      "[Feedback Outro]"
+    ],
+    [
+      "[Atmospheric Drone Intro]",
+      "[Bass Guitar Entry]",
+      "[Tremolo Guitar Melody]",
+      "[Heavy Crash Cymbal Drop]",
+      "[Emotional Release]",
+      "[Long Fade Out]"
+    ],
+    [
+      "[Sparse Piano and Guitar]",
+      "[Tension Building Drums]",
+      "[Crescendo Build]",
+      "[Epic Rock Drop]",
+      "[Triumphant Solo]",
+      "[Quiet Ending]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19991999
+}
