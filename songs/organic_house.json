@@ -1,0 +1,37 @@
+{
+  "id": "organic_house",
+  "choices": {
+    "bpm": [118, 120, 122]
+  },
+  "style": "{bpm}, organic house, downtempo, ethnic percussion, warm acoustic instruments, deep groovy bassline, lush pads, desert house, hypnotic, melodic, warm, earthy, instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Nature Sounds Intro]",
+      "[Hand Drum Percussion]",
+      "[Deep Sub Bass Entry]",
+      "[Acoustic Guitar Motif]",
+      "[Hypnotic Groove]",
+      "[Percussion Breakdown]",
+      "[Fade Out]"
+    ],
+    [
+      "[Lush Pad Swell Intro]",
+      "[Shaker and Clave Rhythm]",
+      "[Groovy Bassline Drop]",
+      "[Wooden Flute Melody]",
+      "[Atmospheric Bridge]",
+      "[Deep House Climax]",
+      "[Echoing End]"
+    ],
+    [
+      "[Minimal Percussive Intro]",
+      "[Four on the Floor Kick]",
+      "[Warm Synth Chords]",
+      "[Ethereal Vocal Chant Sample]",
+      "[Continuous Tribal Groove]",
+      "[Gentle Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 120120
+}

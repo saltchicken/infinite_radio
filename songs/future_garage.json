@@ -1,0 +1,35 @@
+{
+  "id": "future_garage",
+  "choices": {
+    "bpm": [130, 132, 135, 138]
+  },
+  "style": "{bpm}, future garage, UKG, syncopated 2-step beat, deep reese bass, emotive foley textures, dark, atmospheric, swung rhythm, burial style, melancholy, instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Rain Foley Intro]",
+      "[Subtle Syncopated Hi-Hats]",
+      "[2-Step Beat Entry]",
+      "[Deep Reese Bass Drop]",
+      "[Atmospheric Breakdown]",
+      "[Second Drop]",
+      "[Fade Out]"
+    ],
+    [
+      "[Pitched Vocal Chop Intro]",
+      "[Swung Drum Loop]",
+      "[Heavy Sub Bass]",
+      "[Ethereal Pad Swell]",
+      "[Rhythmic Mute]",
+      "[Sudden End]"
+    ],
+    [
+      "[Minimal Ambient Intro]",
+      "[Percussion Build]",
+      "[Garage Drop]",
+      "[Bass Modulation]",
+      "[Long Atmospheric Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 202202
+}

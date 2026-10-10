@@ -1,0 +1,36 @@
+{
+"id": "psybient_dub",
+"choices": {
+"bpm": [80, 90, 100]
+},
+"style": "{bpm}, psybient, psychill, downtempo dub, deep sub bass, tribal percussion, dub delay effects, ethereal floating pads, meditative, trippy, spacious mix, instrumental, zero vocals.",
+"lyrics": [
+[
+"[Drone Intro]",
+"[Tribal Percussion]",
+"[Deep Sub Drop]",
+"[Echoing Synth Lead]",
+"[Atmospheric Breakdown]",
+"[Dub Groove]",
+"[Fade Out]"
+],
+[
+"[Spacious Ambient Intro]",
+"[Slow Heavy Kick]",
+"[Bassline Entry]",
+"[Filter Sweep]",
+"[Percussion Solo]",
+"[Long Outro]"
+],
+[
+"[Minimal Intro]",
+"[Delay Effects]",
+"[Heavy Groove Entry]",
+"[Trance State Breakdown]",
+"[Sub Bass Climax]",
+"[Sudden End]"
+]
+],
+"cot": "full",
+"seed": 432432
+}

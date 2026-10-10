@@ -1,0 +1,37 @@
+{
+  "id": "melodic_trance",
+  "choices": {
+    "bpm": [135, 138, 140]
+  },
+  "style": "{bpm}, uplifting melodic trance, euphoric, emotional synth leads, rolling bassline, driving four on the floor kick, massive arpeggios, stadium club, high energy, ethereal, instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[DJ Intro]",
+      "[Rolling Bass Entry]",
+      "[Euphoric Breakdown]",
+      "[Massive Snare Build-up]",
+      "[Trance Anthem Drop]",
+      "[Arpeggio Solo]",
+      "[DJ Outro]"
+    ],
+    [
+      "[Pad Swell Intro]",
+      "[Pluck Melody Entry]",
+      "[Tension Build-up]",
+      "[Explosive Drop]",
+      "[Emotional Bridge]",
+      "[Final Climax]",
+      "[Fade Out]"
+    ],
+    [
+      "[Fast Kick Intro]",
+      "[Hi-Hat Groove]",
+      "[Long Atmospheric Breakdown]",
+      "[Riser Build-up]",
+      "[Heavy Trance Drop]",
+      "[Echoing End]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 138138
+}

@@ -1,0 +1,34 @@
+{
+  "id": "cinematic_ambient",
+  "choices": {
+    "bpm": [60, 65, 70, 80]
+  },
+  "style": "{bpm}, cinematic ambient, orchestral, epic film score, sweeping string section, deep brass swells, emotional, vast landscape, slow build, powerful, instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Soft String Intro]",
+      "[Cello Melody]",
+      "[Slow Build-up]",
+      "[Timpani Roll]",
+      "[Epic Orchestral Climax]",
+      "[Gentle Fade Out]"
+    ],
+    [
+      "[Deep Drone Intro]",
+      "[French Horn Swell]",
+      "[Choir Pad Entry]",
+      "[Massive Brass Drop]",
+      "[Emotional Release]",
+      "[Silence]"
+    ],
+    [
+      "[Piano Solo Intro]",
+      "[Violin Accompaniment]",
+      "[Tension Building Strings]",
+      "[Grand Climax]",
+      "[Solo Piano Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 111111
+}
