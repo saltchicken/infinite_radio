@@ -9,3 +9,5 @@ cover-score/
 *.mid
 *.tsv
 *.mp3
+
+*.safetensors

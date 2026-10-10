@@ -1,3 +1,4 @@
+import torch
 import argparse
 import json
 import random
@@ -13,11 +14,50 @@ from yue2 import YuE2Pipeline
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+# --- LoRA Loading Helpers ---
+def _mods(prefix): 
+    return [(f"{prefix}self_attn", n) for n in ("q_proj", "k_proj", "v_proj", "o_proj")] + \
+           [(f"{prefix}mlp", n) for n in ("gate_proj", "up_proj", "down_proj")]
+
+def load_ckpt(path, map_location="cuda"):
+    from safetensors.torch import load_file
+    from safetensors import safe_open
+    
+    t = load_file(path, device=str(map_location))
+    with safe_open(path, "pt") as f: 
+        meta = f.metadata() or {}
+        
+    prefix = ""
+    layers = sorted({int(k.split(".")[1]) for k in t if k.startswith("layers.")})
+    lora = []
+    
+    for L in layers:
+        for blk, proj in _mods(prefix): 
+            lora += [t[f"layers.{L}.{blk}.{proj}.lora_A"], t[f"layers.{L}.{blk}.{proj}.lora_B"]]
+            
+    return {"lora": lora, "rank": int(meta.get("rank", lora[0].shape[0]))}
+
+@torch.no_grad()
+def merge_lora(bb, attn_name, mlp_name, tensors, scale=1.0, dev="cuda"):
+    it = iter(tensors)
+    n_merged = 0
+    for layer in bb.layers:
+        for mod, names in ((getattr(layer, attn_name), ("q_proj", "k_proj", "v_proj", "o_proj")),
+                           (getattr(layer, mlp_name), ("gate_proj", "up_proj", "down_proj"))):
+            for n in names:
+                A = next(it).to(dev).float()
+                B = next(it).to(dev).float()
+                lin = getattr(mod, n)
+                # Fold LoRA deltas (W += scale * B @ A) into the base weights
+                lin.weight.add_((scale * (B @ A)).to(lin.weight.dtype))
+                n_merged += 1
+    return n_merged
+# ----------------------------
+
 def load_merged_config(request_path):
     """Reads controller.json and merges it with the active style file."""
     controller_data = json.loads(request_path.read_text(encoding="utf-8"))
     
-    # Sensible playback defaults in case controller.json omits any
     playback_defaults = {
         "volume": 0.3,
         "pause": False,
@@ -34,8 +74,6 @@ def load_merged_config(request_path):
         else:
             print(f"\n[Warning] Style file not found: {style_path}")
 
-    # Start with the generation parameters from the song file,
-    # then overlay the playback controls from controller.json
     merged = style_data.copy()
     merged.update(controller_data)
     return merged, controller_data
@@ -61,7 +99,6 @@ class ConfigHandler(FileSystemEventHandler):
                 self.shared_state.clear()
                 self.shared_state.update(merged_data)
             
-            # Trigger skip and auto-reset the JSON to false to prevent endless skipping
             if controller_data.get("skip", False):
                 self.skip_event.set()
                 controller_data["skip"] = False
@@ -110,17 +147,15 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
             if shutdown_event.is_set():
                 return "SHUTDOWN"
 
-            # Apply volume multiplier dynamically
             with config_lock:
                 volume = float(shared_state.get("volume", 1.0))
 
             chunk = audio_data[i:i + chunk_frames] * volume
 
-            # Local Audio Playback & Pacing
             if stream is not None:
                 if not stream.active:
                     stream.start()
-                stream.write(chunk) # stream.write automatically blocks, pacing the loop
+                stream.write(chunk) 
 
         return "OK"
 
@@ -159,7 +194,7 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
                 status = stream_write_interruptible(transition, chunk_size, fs)
                 if status == "SHUTDOWN": break
                 if status == "SKIP":
-                    current_tail = None # Clear tail so the next song starts clean
+                    current_tail = None 
                     play_queue.task_done()
                     continue
 
@@ -186,12 +221,13 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
 
 def main():
     parser = argparse.ArgumentParser()
-    # Default now points to controller.json in the root directory
     parser.add_argument("--request", type=Path, default=Path.cwd() / "controller.json")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--crossfade", type=float, default=6.0)
     parser.add_argument("--model", default="m-a-p/YuE2-3B")
     parser.add_argument("--vae", default="m-a-p/YuE2-Vae")
+    parser.add_argument("--ar-lora", type=Path, help="Path to the AR LoRA safetensors file")
+    parser.add_argument("--ar-scale", type=float, default=1.0)
     args = parser.parse_args()
 
     args.output.mkdir(parents=True, exist_ok=True)
@@ -227,8 +263,20 @@ def main():
 
     try:
         with YuE2Pipeline.from_pretrained(args.model, vae=args.vae, device="cuda") as pipe:
+            
+            # --- Inject LoRA Weights ---
+            if args.ar_lora and args.ar_lora.exists():
+                print(f"Loading AR LoRA from {args.ar_lora.name}...")
+                lora_data = load_ckpt(str(args.ar_lora), "cuda")
+                # Get the underlying base model inside the pipeline
+                base_model = pipe._load_model().model
+                
+                n_merged = merge_lora(base_model, "self_attn", "mlp", lora_data["lora"], scale=args.ar_scale, dev="cuda")
+                print(f"Merged {n_merged} AR LoRA linear layers (scale: {args.ar_scale}).")
+            # ---------------------------
+            
             track_number = 1
-            track_history = []  # Tracks paths for ring buffer logic
+            track_history = []  
 
             while not shutdown_event.is_set():
                 while pause_event.is_set() and not shutdown_event.is_set():
@@ -252,9 +300,8 @@ def main():
                 active_request.pop("pause", None)
                 active_request.pop("skip", None)
                 active_request.pop("volume", None)
-                active_request.pop("active_style", None) # Clean up for YuE pipeline
+                active_request.pop("active_style", None) 
 
-                # If lyrics is a list of options, pick one randomly
                 if isinstance(active_request.get("lyrics"), list):
                     chosen = random.choice(active_request["lyrics"])
                     if isinstance(chosen, list):
@@ -262,7 +309,6 @@ def main():
                     else:
                         active_request["lyrics"] = chosen
 
-                # Replace any {placeholders} in the style prompt dynamically
                 if "choices" in active_request:
                     choices = active_request.pop("choices") 
                     if isinstance(active_request.get("style"), str):
@@ -273,7 +319,6 @@ def main():
                 current_output_dir = args.output / f"track_{track_number:03d}"
                 current_output_dir.mkdir(exist_ok=True)
 
-                # Save the exact parameters used for this specific track
                 metadata_path = current_output_dir / "metadata.json"
                 with open(metadata_path, "w", encoding="utf-8") as f:
                     json.dump(active_request, f, indent=2)
@@ -292,7 +337,6 @@ def main():
                 play_queue.put((data, fs, track_name))
                 print(f"Track {track_number} queued for next crossfade.")
 
-                # Keep only the latest 10 tracks by deleting the oldest
                 track_history.append(current_output_dir)
                 if len(track_history) > 10:
                     old_track_dir = track_history.pop(0)
