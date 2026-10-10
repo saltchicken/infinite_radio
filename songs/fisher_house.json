@@ -1,0 +1,37 @@
+{
+  "id": "fisher_tech_house",
+  "choices": {
+    "bpm": [124, 125, 126, 128]
+  },
+  "style": "{bpm}, tech house, bouncy driving bassline, punchy four on the floor kick, shuffling hi-hats, quirky repetitive vocal hook, high energy club banger, festival mainstage, tension build and heavy drop.",
+  "lyrics": [
+    [
+      "[DJ Intro]",
+      "[Percussion Build-up]",
+      "[Quirky Vocal Hook]",
+      "[Heavy Bass Drop]",
+      "[Minimal Breakdown]",
+      "[Vocal Build-up]",
+      "[Second Drop]",
+      "[DJ Outro]"
+    ],
+    [
+      "[Stripped Back Intro]",
+      "[Bouncy Bassline Entry]",
+      "[Rising Snare Roll]",
+      "[Catchy Vocal Phrase]",
+      "[Tech House Drop]",
+      "[Groove Outro]"
+    ],
+    [
+      "[Shuffling Hi-Hat Intro]",
+      "[Tension Building Synth]",
+      "[Massive Build-up]",
+      "[Bass and Kick Drop]",
+      "[Vocal Sample Loop]",
+      "[Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 125125
+}

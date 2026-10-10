@@ -27,7 +27,7 @@ def load_ckpt(path, map_location="cuda"):
     with safe_open(path, "pt") as f: 
         meta = f.metadata() or {}
         
-    prefix = ""
+    prefix = "nar_" if any(".nar_self_attn." in k for k in t) else ""
     layers = sorted({int(k.split(".")[1]) for k in t if k.startswith("layers.")})
     lora = []
     
@@ -35,7 +35,10 @@ def load_ckpt(path, map_location="cuda"):
         for blk, proj in _mods(prefix): 
             lora += [t[f"layers.{L}.{blk}.{proj}.lora_A"], t[f"layers.{L}.{blk}.{proj}.lora_B"]]
             
-    return {"lora": lora, "rank": int(meta.get("rank", lora[0].shape[0]))}
+    out = {"lora": lora, "rank": int(meta.get("rank", lora[0].shape[0]))}
+    if prefix: 
+        out["io"] = {m: {k.split(".", 1)[1]: v for k, v in t.items() if k.startswith(m + ".")} for m in ("vae2llm", "llm2vae")}
+    return out
 
 @torch.no_grad()
 def merge_lora(bb, attn_name, mlp_name, tensors, scale=1.0, dev="cuda"):
@@ -48,20 +51,20 @@ def merge_lora(bb, attn_name, mlp_name, tensors, scale=1.0, dev="cuda"):
                 A = next(it).to(dev).float()
                 B = next(it).to(dev).float()
                 lin = getattr(mod, n)
-                # Fold LoRA deltas (W += scale * B @ A) into the base weights
                 lin.weight.add_((scale * (B @ A)).to(lin.weight.dtype))
                 n_merged += 1
     return n_merged
 # ----------------------------
 
 def load_merged_config(request_path):
-    """Reads controller.json and merges it with the active style file."""
     controller_data = json.loads(request_path.read_text(encoding="utf-8"))
     
     playback_defaults = {
         "volume": 0.3,
         "pause": False,
         "skip": False,
+        "ar_scale": 1.0,
+        "nar_scale": 1.0  # Added NAR scale default
     }
     for k, v in playback_defaults.items():
         controller_data.setdefault(k, v)
@@ -227,7 +230,7 @@ def main():
     parser.add_argument("--model", default="m-a-p/YuE2-3B")
     parser.add_argument("--vae", default="m-a-p/YuE2-Vae")
     parser.add_argument("--ar-lora", type=Path, help="Path to the AR LoRA safetensors file")
-    parser.add_argument("--ar-scale", type=float, default=1.0)
+    parser.add_argument("--nar-lora", type=Path, help="Path to the NAR LoRA safetensors file")
     args = parser.parse_args()
 
     args.output.mkdir(parents=True, exist_ok=True)
@@ -259,94 +262,118 @@ def main():
     print(f"\n==============================================")
     print(f"📻 Infinite Radio Local Playback Started")
     print(f"==============================================\n")
-    print("Loading YuE2 Model into VRAM... (This only happens once)")
+
+    pipe = None
+    current_ar_scale = None
+    current_nar_scale = None
+    track_number = 1
+    track_history = []  
 
     try:
-        with YuE2Pipeline.from_pretrained(args.model, vae=args.vae, device="cuda") as pipe:
-            
-            # --- Inject LoRA Weights ---
-            if args.ar_lora and args.ar_lora.exists():
-                print(f"Loading AR LoRA from {args.ar_lora.name}...")
-                lora_data = load_ckpt(str(args.ar_lora), "cuda")
-                # Get the underlying base model inside the pipeline
-                base_model = pipe._load_model().model
+        while not shutdown_event.is_set():
+            while pause_event.is_set() and not shutdown_event.is_set():
+                shutdown_event.wait(1.0)
+
+            while play_queue.qsize() >= 3 and not shutdown_event.is_set():
+                shutdown_event.wait(1.0)
+
+            if shutdown_event.is_set():
+                break
+            if pause_event.is_set():
+                continue
+
+            with config_lock:
+                active_request = shared_state.copy()
+
+            requested_ar_scale = float(active_request.get("ar_scale", 1.0))
+            requested_nar_scale = float(active_request.get("nar_scale", 1.0))
+
+            # --- Dynamic Model Reloading ---
+            # Trigger a reload if the pipeline isn't loaded yet, or if the user changed either scale
+            if pipe is None or current_ar_scale != requested_ar_scale or current_nar_scale != requested_nar_scale:
+                if pipe is not None:
+                    print(f"\n🔄 [System] LoRA scale change detected (AR: {current_ar_scale} -> {requested_ar_scale}, NAR: {current_nar_scale} -> {requested_nar_scale}). Reloading model...")
+                    del pipe
+                    torch.cuda.empty_cache()
+                else:
+                    print("Loading YuE2 Model into VRAM...")
+
+                pipe = YuE2Pipeline.from_pretrained(args.model, vae=args.vae, device="cuda")
+                top_model = pipe._load_model()
+                bb = top_model.model
                 
-                n_merged = merge_lora(base_model, "self_attn", "mlp", lora_data["lora"], scale=args.ar_scale, dev="cuda")
-                print(f"Merged {n_merged} AR LoRA linear layers (scale: {args.ar_scale}).")
-            # ---------------------------
-            
-            track_number = 1
-            track_history = []  
+                if args.ar_lora and args.ar_lora.exists():
+                    print(f"Loading AR LoRA from {args.ar_lora.name}...")
+                    ar_data = load_ckpt(str(args.ar_lora), "cuda")
+                    n_merged = merge_lora(bb, "self_attn", "mlp", ar_data["lora"], scale=requested_ar_scale, dev="cuda")
+                    print(f"Merged {n_merged} AR LoRA linear layers (scale: {requested_ar_scale}).")
+                
+                if args.nar_lora and args.nar_lora.exists():
+                    print(f"Loading NAR LoRA from {args.nar_lora.name}...")
+                    nar_data = load_ckpt(str(args.nar_lora), "cuda")
+                    n_merged = merge_lora(bb, "nar_self_attn", "nar_mlp", nar_data["lora"], scale=requested_nar_scale, dev="cuda")
+                    top_model.vae2llm.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["vae2llm"].items()})
+                    top_model.llm2vae.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["llm2vae"].items()})
+                    print(f"Merged {n_merged} NAR LoRA linear layers (scale: {requested_nar_scale}) & injected custom VAE/LLM crossovers.")
 
-            while not shutdown_event.is_set():
-                while pause_event.is_set() and not shutdown_event.is_set():
-                    shutdown_event.wait(1.0)
+                current_ar_scale = requested_ar_scale
+                current_nar_scale = requested_nar_scale
 
-                while play_queue.qsize() >= 3 and not shutdown_event.is_set():
-                    shutdown_event.wait(1.0)
+            print(f"\n--- Generating Track {track_number} ---")
 
-                if shutdown_event.is_set():
-                    break
+            active_request["seed"] = random.randint(0, 2**32 - 1)
+            active_request.pop("pause", None)
+            active_request.pop("skip", None)
+            active_request.pop("volume", None)
+            active_request.pop("active_style", None) 
+            active_request.pop("ar_scale", None)
+            active_request.pop("nar_scale", None)
 
-                if pause_event.is_set():
-                    continue
+            if isinstance(active_request.get("lyrics"), list):
+                chosen = random.choice(active_request["lyrics"])
+                if isinstance(chosen, list):
+                    active_request["lyrics"] = "\n".join(chosen)
+                else:
+                    active_request["lyrics"] = chosen
 
-                print(f"\n--- Generating Track {track_number} ---")
+            if "choices" in active_request:
+                choices = active_request.pop("choices") 
+                if isinstance(active_request.get("style"), str):
+                    for key, options in choices.items():
+                        chosen_val = str(random.choice(options))
+                        active_request["style"] = active_request["style"].replace(f"{{{key}}}", chosen_val)
 
-                with config_lock:
-                    active_request = shared_state.copy()
+            current_output_dir = args.output / f"track_{track_number:03d}"
+            current_output_dir.mkdir(exist_ok=True)
 
-                active_request["seed"] = random.randint(0, 2**32 - 1)
-                active_request.pop("pause", None)
-                active_request.pop("skip", None)
-                active_request.pop("volume", None)
-                active_request.pop("active_style", None) 
+            metadata_path = current_output_dir / "metadata.json"
+            with open(metadata_path, "w", encoding="utf-8") as f:
+                json.dump(active_request, f, indent=2)
 
-                if isinstance(active_request.get("lyrics"), list):
-                    chosen = random.choice(active_request["lyrics"])
-                    if isinstance(chosen, list):
-                        active_request["lyrics"] = "\n".join(chosen)
-                    else:
-                        active_request["lyrics"] = chosen
+            song = pipe(**active_request)
+            song.save_artifacts(current_output_dir)
+            audio_path = current_output_dir / "audio.flac"
 
-                if "choices" in active_request:
-                    choices = active_request.pop("choices") 
-                    if isinstance(active_request.get("style"), str):
-                        for key, options in choices.items():
-                            chosen_val = str(random.choice(options))
-                            active_request["style"] = active_request["style"].replace(f"{{{key}}}", chosen_val)
+            print(f"Track {track_number} rendered! Decoding audio into memory...")
 
-                current_output_dir = args.output / f"track_{track_number:03d}"
-                current_output_dir.mkdir(exist_ok=True)
+            data, fs = sf.read(audio_path, dtype="float32")
+            if data.ndim == 1:
+                data = np.column_stack([data, data])
 
-                metadata_path = current_output_dir / "metadata.json"
-                with open(metadata_path, "w", encoding="utf-8") as f:
-                    json.dump(active_request, f, indent=2)
+            track_name = audio_path.parent.name.split('_')[-1]
+            play_queue.put((data, fs, track_name))
+            print(f"Track {track_number} queued for next crossfade.")
 
-                song = pipe(**active_request)
-                song.save_artifacts(current_output_dir)
-                audio_path = current_output_dir / "audio.flac"
+            track_history.append(current_output_dir)
+            if len(track_history) > 10:
+                old_track_dir = track_history.pop(0)
+                try:
+                    shutil.rmtree(old_track_dir)
+                    print(f"Ring buffer: Deleted old track {old_track_dir.name} from disk.")
+                except OSError as e:
+                    print(f"Ring buffer: Failed to delete {old_track_dir.name}: {e}")
 
-                print(f"Track {track_number} rendered! Decoding audio into memory...")
-
-                data, fs = sf.read(audio_path, dtype="float32")
-                if data.ndim == 1:
-                    data = np.column_stack([data, data])
-
-                track_name = audio_path.parent.name.split('_')[-1]
-                play_queue.put((data, fs, track_name))
-                print(f"Track {track_number} queued for next crossfade.")
-
-                track_history.append(current_output_dir)
-                if len(track_history) > 10:
-                    old_track_dir = track_history.pop(0)
-                    try:
-                        shutil.rmtree(old_track_dir)
-                        print(f"Ring buffer: Deleted old track {old_track_dir.name} from disk.")
-                    except OSError as e:
-                        print(f"Ring buffer: Failed to delete {old_track_dir.name}: {e}")
-
-                track_number += 1
+            track_number += 1
 
     except KeyboardInterrupt:
         print("\n\n[Main] Shutdown signal received (Ctrl+C). Terminating gracefully...")
@@ -355,6 +382,9 @@ def main():
     finally:
         shutdown_event.set()
         pause_event.clear()
+        if 'pipe' in locals() and pipe is not None:
+            del pipe
+        torch.cuda.empty_cache()
 
         print("[Main] Waiting for background processes to exit...")
         watcher_thread.join(timeout=3)

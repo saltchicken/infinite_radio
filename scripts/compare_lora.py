@@ -17,7 +17,7 @@ def load_ckpt(path, map_location="cuda"):
     with safe_open(path, "pt") as f: 
         meta = f.metadata() or {}
         
-    prefix = ""
+    prefix = "nar_" if any(".nar_self_attn." in k for k in t) else ""
     layers = sorted({int(k.split(".")[1]) for k in t if k.startswith("layers.")})
     lora = []
     
@@ -25,7 +25,10 @@ def load_ckpt(path, map_location="cuda"):
         for blk, proj in _mods(prefix): 
             lora += [t[f"layers.{L}.{blk}.{proj}.lora_A"], t[f"layers.{L}.{blk}.{proj}.lora_B"]]
             
-    return {"lora": lora, "rank": int(meta.get("rank", lora[0].shape[0]))}
+    out = {"lora": lora, "rank": int(meta.get("rank", lora[0].shape[0]))}
+    if prefix: 
+        out["io"] = {m: {k.split(".", 1)[1]: v for k, v in t.items() if k.startswith(m + ".")} for m in ("vae2llm", "llm2vae")}
+    return out
 
 @torch.no_grad()
 def merge_lora(bb, attn_name, mlp_name, tensors, scale=1.0, dev="cuda"):
@@ -46,12 +49,16 @@ def merge_lora(bb, attn_name, mlp_name, tensors, scale=1.0, dev="cuda"):
 
 def main():
     parser = argparse.ArgumentParser(description="A/B Test a YuE2 song with and without a LoRA.")
-    parser.add_argument("--config", type=Path, default="songs/acid_techno.json", help="Path to a song JSON config (e.g., songs/acid_techno.json)")
-    parser.add_argument("--ar-lora", type=Path, required=True, help="Path to the AR LoRA safetensors file")
-    parser.add_argument("--ar-scale", type=float, default=1.0, help="Scale (strength) of the LoRA")
+    parser.add_argument("--config", type=Path, default="songs/acid_techno.json", help="Path to a song JSON config")
+    parser.add_argument("--ar-lora", type=Path, help="Path to the AR LoRA safetensors file")
+    parser.add_argument("--ar-scale", type=float, default=1.0, help="Scale (strength) of the AR LoRA")
+    parser.add_argument("--nar-lora", type=Path, help="Path to the NAR LoRA safetensors file")
     parser.add_argument("--output", type=Path, default="outputs/comparison")
     parser.add_argument("--seed", type=int, default=42, help="Seed to use for both generations")
     args = parser.parse_args()
+
+    if not args.ar_lora and not args.nar_lora:
+        print("⚠️ Warning: You didn't provide an --ar-lora or --nar-lora path. The comparison will just generate two identical base tracks.")
 
     args.output.mkdir(parents=True, exist_ok=True)
 
@@ -85,7 +92,10 @@ def main():
     print(f"Lyrics:\n{config['lyrics']}")
     print(f"Seed: {config['seed']}")
     print(f"COT Mode: {config.get('cot', 'off')}")
-    print(f"AR LoRA Scale: {args.ar_scale}")
+    if args.ar_lora:
+        print(f"AR LoRA: {args.ar_lora.name} (Scale: {args.ar_scale})")
+    if args.nar_lora:
+        print(f"NAR LoRA: {args.nar_lora.name}")
     print(f"======================================\n")
 
     print("Loading YuE2 Base Model...")
@@ -99,12 +109,26 @@ def main():
         base_song.save_artifacts(base_out)
         print(f"✅ Base track saved to: {base_out}/audio.flac")
 
-        # --- PHASE 2: Apply LoRA ---
-        print(f"\n>>> Injecting AR LoRA from {args.ar_lora} into the active model (scale: {args.ar_scale})...")
-        lora_data = load_ckpt(str(args.ar_lora), "cuda")
-        base_model = pipe._load_model().model
-        n_merged = merge_lora(base_model, "self_attn", "mlp", lora_data["lora"], scale=args.ar_scale, dev="cuda")
-        print(f"✅ Merged {n_merged} AR LoRA linear layers successfully.")
+        # --- PHASE 2: Apply LoRAs ---
+        print(f"\n>>> Injecting LoRAs into the active model...")
+        top_model = pipe._load_model()
+        bb = top_model.model
+        
+        if args.ar_lora and args.ar_lora.exists():
+            print(f"Loading AR LoRA from {args.ar_lora} (scale: {args.ar_scale})...")
+            ar_data = load_ckpt(str(args.ar_lora), "cuda")
+            n_merged = merge_lora(bb, "self_attn", "mlp", ar_data["lora"], scale=args.ar_scale, dev="cuda")
+            print(f"✅ Merged {n_merged} AR LoRA linear layers successfully.")
+
+        if args.nar_lora and args.nar_lora.exists():
+            print(f"Loading NAR LoRA from {args.nar_lora}...")
+            nar_data = load_ckpt(str(args.nar_lora), "cuda")
+            n_merged = merge_lora(bb, "nar_self_attn", "nar_mlp", nar_data["lora"], scale=1.0, dev="cuda")
+            
+            # Apply full replacement weights for VAE <-> LLM crossover
+            top_model.vae2llm.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["vae2llm"].items()})
+            top_model.llm2vae.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["llm2vae"].items()})
+            print(f"✅ Merged {n_merged} NAR LoRA linear layers & custom VAE/LLM crossovers.")
 
         # --- PHASE 3: LoRA Generation ---
         print("\n>>> Generating PHASE 2: Model + LoRA (Same seed and params)...")
