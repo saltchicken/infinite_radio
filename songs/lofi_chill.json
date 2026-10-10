@@ -1,0 +1,35 @@
+{
+  "id": "lofi_study_beats",
+  "choices": {
+    "bpm": [70, 75, 80, 82]
+  },
+  "style": "{bpm}, lo-fi hip hop, chillhop, relaxing study beats, vinyl crackle, warm dusty piano, boom bap drum loop, mellow bass, jazzy chords, cozy, instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Vinyl Crackle Intro]",
+      "[Jazzy Piano Loop]",
+      "[Beat Drop]",
+      "[Mellow Bassline]",
+      "[Beat Cutout]",
+      "[Outro]"
+    ],
+    [
+      "[Acoustic Guitar Intro]",
+      "[Drum Loop Entry]",
+      "[Main Groove]",
+      "[Trumpet Sample Solo]",
+      "[Chill Breakdown]",
+      "[Fade Out]"
+    ],
+    [
+      "[Rain Sound Intro]",
+      "[Electric Piano Chords]",
+      "[Snare Roll]",
+      "[Deep Groove]",
+      "[Melancholy Melody]",
+      "[Slow Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 404808
+}

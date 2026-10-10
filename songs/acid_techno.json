@@ -1,7 +1,4 @@
 {
-  "volume": 1.0,
-  "pause": false,
-  "skip": false,
   "id": "acid_techno_warehouse",
   "choices": {
     "bpm": [90, 110, 130, 140]

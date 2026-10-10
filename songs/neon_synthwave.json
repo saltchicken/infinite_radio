@@ -1,0 +1,35 @@
+{
+  "id": "neon_synthwave",
+  "choices": {
+    "bpm": [85, 90, 95, 100]
+  },
+  "style": "{bpm}, synthwave, retrowave, 80s nostalgia, analog synthesizers, punchy gated snare, driving arpeggiated bassline, neon lights, cyberpunk aesthetic, atmospheric, instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Atmospheric Intro]",
+      "[Arpeggio Build-up]",
+      "[Main Synth Melody]",
+      "[Bridge]",
+      "[Epic Synth Solo]",
+      "[Fade Out]"
+    ],
+    [
+      "[Pulsing Bass Intro]",
+      "[Beat Drop]",
+      "[Melodic Lead Entry]",
+      "[Breakdown]",
+      "[Climax]",
+      "[Outro]"
+    ],
+    [
+      "[Slow Intro]",
+      "[Gated Snare Groove]",
+      "[Chorus Melody]",
+      "[Electric Guitar Solo]",
+      "[Final Chorus]",
+      "[Sudden End]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 198484
+}

@@ -1,0 +1,37 @@
+{
+  "id": "liquid_dnb",
+  "choices": {
+    "bpm": [170, 172, 174, 175]
+  },
+  "style": "{bpm}, liquid drum and bass, dnb, smooth rolling breakbeats, deep sub bass, ethereal pads, uplifting, atmospheric, fast-paced but relaxing, instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Ambient Pad Intro]",
+      "[Fast Hi-Hats]",
+      "[Breakbeat Drop]",
+      "[Deep Sub Bass Line]",
+      "[Ethereal Breakdown]",
+      "[Second Drop]",
+      "[Outro]"
+    ],
+    [
+      "[Vocal Chop Intro]",
+      "[Rolling Drums Entry]",
+      "[Massive Bass Drop]",
+      "[Melodic Synth Sequence]",
+      "[Atmospheric Bridge]",
+      "[Final Climax]",
+      "[Fade Out]"
+    ],
+    [
+      "[Minimal Intro]",
+      "[Percussion Build-up]",
+      "[Heavy Sub Drop]",
+      "[Jazz Chords]",
+      "[Drum Loop Solo]",
+      "[Sudden End]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 174174
+}

@@ -1,0 +1,38 @@
+{
+  "id": "festival_tech_house",
+  "choices": {
+    "bpm": [124, 125, 126, 128]
+  },
+  "style": "{bpm}, tech house, big room EDM, festival anthem, driving rolling bassline, punchy kick drum, energetic build-ups, massive tech drop, party vibe, rhythmic vocal chops, high energy, club banger.",
+  "lyrics": [
+    [
+      "[DJ Intro]",
+      "[Percussive Groove]",
+      "[Tension Build-up]",
+      "[Massive Bass Drop]",
+      "[Groove Section]",
+      "[Outro]"
+    ],
+    [
+      "[Atmospheric Intro]",
+      "[Bassline Entry]",
+      "[Snare Roll Build-up]",
+      "[Tech House Drop]",
+      "[Vocal Chop Breakdown]",
+      "[Second Drop]",
+      "[Fade Out]"
+    ],
+    [
+      "[Punchy Kick Intro]",
+      "[Hi-Hat Groove]",
+      "[Sirens and Build-up]",
+      "[Explosive Drop]",
+      "[Deep Bass Breakdown]",
+      "[Build-up]",
+      "[Final Drop]",
+      "[DJ Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 808909
+}

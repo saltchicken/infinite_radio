@@ -13,6 +13,33 @@ from yue2 import YuE2Pipeline
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+def load_merged_config(request_path):
+    """Reads controller.json and merges it with the active style file."""
+    controller_data = json.loads(request_path.read_text(encoding="utf-8"))
+    
+    # Sensible playback defaults in case controller.json omits any
+    playback_defaults = {
+        "volume": 0.3,
+        "pause": False,
+        "skip": False,
+    }
+    for k, v in playback_defaults.items():
+        controller_data.setdefault(k, v)
+
+    style_data = {}
+    if "active_style" in controller_data:
+        style_path = request_path.parent / controller_data["active_style"]
+        if style_path.exists():
+            style_data = json.loads(style_path.read_text(encoding="utf-8"))
+        else:
+            print(f"\n[Warning] Style file not found: {style_path}")
+
+    # Start with the generation parameters from the song file,
+    # then overlay the playback controls from controller.json
+    merged = style_data.copy()
+    merged.update(controller_data)
+    return merged, controller_data
+
 class ConfigHandler(FileSystemEventHandler):
     def __init__(self, request_path, shared_state, pause_event, skip_event, config_lock):
         self.request_path = request_path.resolve()
@@ -28,16 +55,18 @@ class ConfigHandler(FileSystemEventHandler):
 
     def update_config(self):
         try:
-            data = json.loads(self.request_path.read_text(encoding="utf-8"))
+            merged_data, controller_data = load_merged_config(self.request_path)
+            
             with self.config_lock:
-                self.shared_state.update(data)
+                self.shared_state.clear()
+                self.shared_state.update(merged_data)
             
             # Trigger skip and auto-reset the JSON to false to prevent endless skipping
-            if data.get("skip", False):
+            if controller_data.get("skip", False):
                 self.skip_event.set()
-                data["skip"] = False
+                controller_data["skip"] = False
                 with open(self.request_path, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=2)
+                    json.dump(controller_data, f, indent=2)
 
             if self.shared_state.get("pause", False):
                 self.pause_event.set()
@@ -75,7 +104,7 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
             while pause_event.is_set() and not shutdown_event.is_set():
                 if stream and stream.active:
                     stream.stop()
-                    print("\n[Player] Paused. Set 'pause': false in song.json to resume.")
+                    print("\n[Player] Paused. Set 'pause': false in controller.json to resume.")
                 shutdown_event.wait(0.1)
 
             if shutdown_event.is_set():
@@ -157,7 +186,8 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--request", type=Path, default=Path.cwd() / "song.json")
+    # Default now points to controller.json in the root directory
+    parser.add_argument("--request", type=Path, default=Path.cwd() / "controller.json")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--crossfade", type=float, default=6.0)
     parser.add_argument("--model", default="m-a-p/YuE2-3B")
@@ -166,7 +196,14 @@ def main():
 
     args.output.mkdir(parents=True, exist_ok=True)
 
-    shared_state = json.loads(args.request.read_text(encoding="utf-8"))
+    shared_state = {}
+    try:
+        initial_data, _ = load_merged_config(args.request)
+        shared_state.update(initial_data)
+    except Exception as e:
+        print(f"Error loading initial config: {e}. Ensure controller.json exists.")
+        return
+
     pause_event = threading.Event()
     skip_event = threading.Event()
     shutdown_event = threading.Event()
@@ -213,13 +250,13 @@ def main():
 
                 active_request["seed"] = random.randint(0, 2**32 - 1)
                 active_request.pop("pause", None)
-                active_request.pop("skip", None)  # Prevent kwargs error in YuE pipeline
-                active_request.pop("volume", None) # Prevent kwargs error in YuE pipeline
+                active_request.pop("skip", None)
+                active_request.pop("volume", None)
+                active_request.pop("active_style", None) # Clean up for YuE pipeline
 
                 # If lyrics is a list of options, pick one randomly
                 if isinstance(active_request.get("lyrics"), list):
                     chosen = random.choice(active_request["lyrics"])
-                    # Join the lines with \n if it's a list of lines
                     if isinstance(chosen, list):
                         active_request["lyrics"] = "\n".join(chosen)
                     else:
@@ -227,7 +264,6 @@ def main():
 
                 # Replace any {placeholders} in the style prompt dynamically
                 if "choices" in active_request:
-                    # Pop it so the pipeline doesn't crash on an unknown kwarg
                     choices = active_request.pop("choices") 
                     if isinstance(active_request.get("style"), str):
                         for key, options in choices.items():
