@@ -1,0 +1,35 @@
+{
+  "id": "celtic_folk_tavern",
+  "choices": {
+    "bpm": [110, 115, 120]
+  },
+  "style": "{bpm}, celtic folk, fantasy tavern, acoustic instruments, fiddle, bodhran drum, acoustic guitar, joyful, dancing, traditional, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Acoustic Guitar Intro]",
+      "[Fiddle Melody Entry]",
+      "[Bodhran Rhythm]",
+      "[Joyful Dance]",
+      "[Flute Solo]",
+      "[Lively Outro]"
+    ],
+    [
+      "[Solo Flute Intro]",
+      "[Building Acoustic Rhythm]",
+      "[Full Tavern Ensemble]",
+      "[Stomping Breakdown]",
+      "[Fast Paced Climax]",
+      "[Abrupt End]"
+    ],
+    [
+      "[Slow Acoustic Intro]",
+      "[Percussion Build-up]",
+      "[Fast Jig Groove]",
+      "[Trading Solos]",
+      "[Grand Ensemble Return]",
+      "[Final Stomp]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 17321732
+}

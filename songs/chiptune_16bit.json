@@ -1,0 +1,35 @@
+{
+  "id": "chiptune_16bit",
+  "choices": {
+    "bpm": [130, 140, 150]
+  },
+  "style": "{bpm}, 16-bit chiptune, video game music, retro console, square wave melodies, arpeggiated chords, upbeat, nostalgic, fast-paced action stage, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[8-bit Arpeggio Intro]",
+      "[Upbeat Drum Loop]",
+      "[Square Wave Lead Entry]",
+      "[High Energy Bridge]",
+      "[Boss Battle Climax]",
+      "[Stage Clear Outro]"
+    ],
+    [
+      "[Fast Chiptune Melody]",
+      "[Counter Melody Entry]",
+      "[Retro Breakdown]",
+      "[Triangle Bass Solo]",
+      "[Full Chip Ensemble]",
+      "[Sudden End]"
+    ],
+    [
+      "[Melodic Intro]",
+      "[Rising Synth Build]",
+      "[Fast Paced Groove]",
+      "[Arpeggiator Solo]",
+      "[Triumphant Climax]",
+      "[Echoing Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19911991
+}

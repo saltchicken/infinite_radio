@@ -1,0 +1,35 @@
+{
+  "id": "synthwave_outrun",
+  "choices": {
+    "bpm": [115, 120, 125, 130]
+  },
+  "style": "{bpm}, synthwave, outrun, retrowave, 80s nostalgia, analog synthesizers, driving bassline, gated reverb snare, neon lights, night drive, electronic, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Analog Intro]",
+      "[Driving Bass Entry]",
+      "[Synth Lead Melody]",
+      "[Atmospheric Breakdown]",
+      "[Guitar-like Synth Solo]",
+      "[Fade Out]"
+    ],
+    [
+      "[Gated Snare Intro]",
+      "[Arpeggiator Build]",
+      "[Main Groove]",
+      "[Melodic Bridge]",
+      "[High Energy Climax]",
+      "[Reverb Tail Outro]"
+    ],
+    [
+      "[Dark Pad Intro]",
+      "[Pulsing Bassline]",
+      "[Tension Build-up]",
+      "[Retro Drop]",
+      "[Filter Sweep Breakdown]",
+      "[Sudden End]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19841984
+}

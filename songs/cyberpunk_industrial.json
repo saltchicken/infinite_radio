@@ -1,0 +1,35 @@
+{
+  "id": "cyberpunk_industrial",
+  "choices": {
+    "bpm": [95, 100, 105, 110]
+  },
+  "style": "{bpm}, cyberpunk industrial, dark synth, heavy distortion, mechanical percussion, dystopian sci-fi, aggressive bass, underground club, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Mechanical Intro]",
+      "[Heavy Bass Drop]",
+      "[Distorted Synth Riff]",
+      "[Industrial Breakdown]",
+      "[Aggressive Climax]",
+      "[Fade Out]"
+    ],
+    [
+      "[Alarm Synth Intro]",
+      "[Grinding Bassline Entry]",
+      "[Cyberpunk Groove]",
+      "[Tension Build]",
+      "[Explosive Drop]",
+      "[Sudden End]"
+    ],
+    [
+      "[Ominous Drone Intro]",
+      "[Slow Stomping Beat]",
+      "[Harsh Noise Lead]",
+      "[Rhythmic Glitch Breakdown]",
+      "[Massive Wall of Sound]",
+      "[Echoing Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 20772077
+}
