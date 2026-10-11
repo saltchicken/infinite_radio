@@ -512,7 +512,6 @@ def main():
                         track_log_details.append("📝 Live Edited ABC String applied (forced instrumental).")
                     else:
                         active_request["abc"] = raw_abc
-                        track_log_details.append("📄 Passing raw ABC string untouched (no instrumental override parameters set).")
             # ----------------------------------------
 
             current_output_dir = args.output / f"track_{track_number:03d}"
@@ -522,8 +521,6 @@ def main():
             with open(metadata_path, "w", encoding="utf-8") as f:
                 json.dump(active_request, f, indent=2)
 
-            # Append the final generating line and print out the grouped log block
-            track_log_details.append(f"⚙️ Track {track_number} is generating...")
             combined_log = f"--- Generating Track {track_number} ---\n" + "\n".join(track_log_details)
             main_logger.info(combined_log)
 
@@ -563,7 +560,6 @@ def main():
                 sys.stdout, sys.stderr = original_stdout, original_stderr
 
             elapsed = time.time() - start_time
-            main_logger.info(f"✅ Track {track_number} finished generating in {elapsed:.2f} seconds.")
 
             song.save_artifacts(current_output_dir)
             audio_path = current_output_dir / "audio.flac"
@@ -573,7 +569,7 @@ def main():
                 data = np.column_stack([data, data])
 
             play_queue.put((data, fs, current_output_dir))
-            main_logger.info(f"Track {track_number} queued for next crossfade.")
+            main_logger.info(f"✅ Track {track_number} finished generating in {elapsed:.2f} seconds. Queued for next crossfade.")
 
             track_history.append(current_output_dir)
             if len(track_history) > 10:
