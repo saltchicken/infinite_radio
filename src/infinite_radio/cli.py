@@ -13,9 +13,9 @@ import logging
 from pathlib import Path
 from yue2 import YuE2Pipeline
 
-from .abc_utils import force_instrumental_abc
-from .lora_utils import load_ckpt, merge_lora
-from .shuffle_utils import smart_choice
+from .utils.abc_utils import force_instrumental_abc
+from .utils.lora_utils import load_ckpt, merge_lora
+from .utils.shuffle_utils import smart_choice
 from .watcher import load_controller_config, config_watcher
 from .player import audio_player
 
