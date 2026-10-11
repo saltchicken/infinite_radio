@@ -210,7 +210,7 @@ def main():
                     abc_files = list(abc_path.rglob(f"*-{cot_mode}.abc")) if cot_mode in ["full", "melody"] else list(abc_path.rglob("*.abc"))
                     if abc_files:
                         chosen_abc = smart_choice(abc_files, abc_history, max_memory=15)
-                        track_log_details.append(f"Mode: '{cot_mode}', Score: {chosen_abc.name}")
+                        track_log_details.append(f"Mode: '{cot_mode}' | Score: {chosen_abc.name}")
                         raw_abc = chosen_abc.read_text(encoding="utf-8")
                     else:
                         main_logger.warning(f"No .abc files found for cot '{cot_mode}' in directory {abc_path}. Reverting to standard generation.")
