@@ -9,11 +9,23 @@ import shutil
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
+import logging
 from pathlib import Path
 from datetime import datetime
 from yue2 import YuE2Pipeline
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+
+# --- Logging Configuration ---
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S"
+)
+sys_logger = logging.getLogger("System")
+player_logger = logging.getLogger("Player")
+main_logger = logging.getLogger("Main")
+# -----------------------------
 
 # --- LoRA Loading Helpers ---
 def _mods(prefix): 
@@ -62,10 +74,8 @@ def smart_choice(options, history, max_memory):
     if not options:
         return None
     
-    # Filter out options that are in the history
     available = [opt for opt in options if opt not in history]
     
-    # If the history is so large it ate all our options, just exclude the immediate last played
     if not available:
         if len(options) > 1 and history:
             available = [opt for opt in options if opt != history[-1]]
@@ -75,7 +85,6 @@ def smart_choice(options, history, max_memory):
     chosen = random.choice(available)
     history.append(chosen)
     
-    # Keep the history list from growing endlessly
     while len(history) > max_memory:
         history.pop(0)
         
@@ -136,7 +145,6 @@ class ConfigHandler(FileSystemEventHandler):
                     save_base = curr_dir.parent / "saved"
                     save_base.mkdir(exist_ok=True)
                     
-                    # Generate timestamp and append it to the original folder name
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     save_dest = save_base / f"{curr_dir.name}_{timestamp}"
                     
@@ -147,11 +155,11 @@ class ConfigHandler(FileSystemEventHandler):
                         
                     try:
                         shutil.copytree(curr_dir, save_dest)
-                        print(f"\n[System] 💾 Saved currently playing track to: {save_dest}")
+                        sys_logger.info(f"💾 Saved currently playing track to: {save_dest}")
                     except Exception as e:
-                        print(f"\n[System] ❌ Failed to save track: {e}")
+                        sys_logger.error(f"❌ Failed to save track: {e}")
                 else:
-                    print("\n[System] ⚠️ No track currently playing to save.")
+                    sys_logger.warning("⚠️ No track currently playing to save.")
 
             if config_changed:
                 with open(self.request_path, "w", encoding="utf-8") as f:
@@ -187,13 +195,13 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
             
             if skip_event.is_set():
                 skip_event.clear()
-                print("\n[Player] ⏭️ Skipping current track...")
+                player_logger.info("⏭️ Skipping current track...")
                 return "SKIP"
 
             while pause_event.is_set() and not shutdown_event.is_set():
                 if stream and stream.active:
                     stream.stop()
-                    print("\n[Player] Paused. Set 'pause': false in controller.json to resume.")
+                    player_logger.info("Paused. Set 'pause': false in controller.json to resume.")
                 shutdown_event.wait(0.1)
 
             if shutdown_event.is_set():
@@ -233,7 +241,7 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
                 stream = sd.OutputStream(samplerate=fs, channels=data.shape[1], dtype="float32")
                 stream.start()
 
-            print(f"\n[Player] Transitioning into {current_track_dir.name}...")
+            player_logger.info(f"Transitioning into {current_track_dir.name}...")
 
             t = np.linspace(0.0, 1.0, fade_samples, dtype=np.float32)[:, None]
             fade_out = 1.0 - t
@@ -270,7 +278,7 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
         if stream is not None:
             stream.stop()
             stream.close()
-        print("\n[Player] Audio stream closed and resources released.")
+        player_logger.info("Audio stream closed and resources released.")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -290,7 +298,7 @@ def main():
         initial_data = load_controller_config(args.request)
         shared_state.update(initial_data)
     except Exception as e:
-        print(f"Error loading initial config: {e}. Ensure controller.json exists.")
+        main_logger.error(f"Error loading initial config: {e}. Ensure controller.json exists.")
         return
 
     pause_event = threading.Event()
@@ -311,9 +319,9 @@ def main():
     watcher_thread.start()
     player_thread.start()
 
-    print(f"\n==============================================")
-    print(f"📻 Infinite Radio Local Playback Started")
-    print(f"==============================================\n")
+    main_logger.info("==============================================")
+    main_logger.info("📻 Infinite Radio Local Playback Started")
+    main_logger.info("==============================================")
 
     pipe = None
     current_ar_scale = None
@@ -323,10 +331,8 @@ def main():
     track_number = 1
     track_history = []  
 
-    # --- Initialize Smart Shuffle Histories ---
     style_history = []
     abc_history = []
-    # ------------------------------------------
 
     try:
         while not shutdown_event.is_set():
@@ -344,27 +350,24 @@ def main():
             with config_lock:
                 controller_req = shared_state.copy()
 
-            # --- Dynamically Load & Merge Style per Track ---
             style_data = {}
             if "active_style" in controller_req and controller_req["active_style"]:
                 style_path = args.request.parent / controller_req["active_style"]
                 if style_path.is_dir():
                     style_files = list(style_path.glob("*.json"))
                     if style_files:
-                        # Smart choice: remembers the last 4 styles played
                         chosen_style = smart_choice(style_files, style_history, max_memory=4)
-                        print(f"🎲 [Style Mode] Selected style: {chosen_style.name}")
+                        main_logger.info(f"🎲 [Style Mode] Selected style: {chosen_style.name}")
                         style_data = json.loads(chosen_style.read_text(encoding="utf-8"))
                     else:
-                        print(f"⚠️ [Warning] No .json files found in style directory {style_path}.")
+                        main_logger.warning(f"No .json files found in style directory {style_path}.")
                 elif style_path.is_file():
                     style_data = json.loads(style_path.read_text(encoding="utf-8"))
                 else:
-                    print(f"⚠️ [Warning] Style path not found: {style_path}")
+                    main_logger.warning(f"Style path not found: {style_path}")
 
             active_request = style_data.copy()
             active_request.update(controller_req)
-            # -------------------------------------------------
 
             requested_ar_scale = float(active_request.get("ar_scale", 1.0))
             requested_nar_scale = float(active_request.get("nar_scale", 1.0))
@@ -382,36 +385,36 @@ def main():
                 current_nar_lora != requested_nar_lora):
                 
                 if pipe is not None:
-                    print(f"\n🔄 [System] LoRA configuration change detected. Reloading model...")
+                    sys_logger.info("🔄 LoRA configuration change detected. Reloading model...")
                     del pipe
                     torch.cuda.empty_cache()
                 else:
-                    print("Loading YuE2 Model into VRAM...")
+                    main_logger.info("Loading YuE2 Model into VRAM...")
 
                 pipe = YuE2Pipeline.from_pretrained(args.model, vae=args.vae, device="cuda")
                 top_model = pipe._load_model()
                 bb = top_model.model
                 
                 if requested_ar_lora and requested_ar_lora.exists():
-                    print(f"Loading AR LoRA from {requested_ar_lora.name}...")
+                    main_logger.info(f"Loading AR LoRA from {requested_ar_lora.name}...")
                     ar_data = load_ckpt(str(requested_ar_lora), "cuda")
                     n_merged = merge_lora(bb, "self_attn", "mlp", ar_data["lora"], scale=requested_ar_scale, dev="cuda")
-                    print(f"Merged {n_merged} AR LoRA linear layers (scale: {requested_ar_scale}).")
+                    main_logger.info(f"Merged {n_merged} AR LoRA linear layers (scale: {requested_ar_scale}).")
                 
                 if requested_nar_lora and requested_nar_lora.exists():
-                    print(f"Loading NAR LoRA from {requested_nar_lora.name}...")
+                    main_logger.info(f"Loading NAR LoRA from {requested_nar_lora.name}...")
                     nar_data = load_ckpt(str(requested_nar_lora), "cuda")
                     n_merged = merge_lora(bb, "nar_self_attn", "nar_mlp", nar_data["lora"], scale=requested_nar_scale, dev="cuda")
                     top_model.vae2llm.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["vae2llm"].items()})
                     top_model.llm2vae.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["llm2vae"].items()})
-                    print(f"Merged {n_merged} NAR LoRA linear layers (scale: {requested_nar_scale}) & injected custom VAE/LLM crossovers.")
+                    main_logger.info(f"Merged {n_merged} NAR LoRA linear layers (scale: {requested_nar_scale}) & injected custom VAE/LLM crossovers.")
 
                 current_ar_scale = requested_ar_scale
                 current_nar_scale = requested_nar_scale
                 current_ar_lora = requested_ar_lora
                 current_nar_lora = requested_nar_lora
 
-            print(f"\n--- Generating Track {track_number} ---")
+            main_logger.info(f"--- Generating Track {track_number} ---")
 
             active_request["seed"] = random.randint(0, 2**32 - 1)
             cot_mode = active_request.get("cot", "full")
@@ -443,20 +446,19 @@ def main():
                         abc_files = list(abc_path.rglob("*.abc"))
                         
                     if abc_files:
-                        # Smart choice: remembers the last 15 songs played
                         chosen_abc = smart_choice(abc_files, abc_history, max_memory=15)
-                        print(f"🎵 [Cover Mode] Selected '{cot_mode}' ABC sheet music: {chosen_abc.name}")
+                        main_logger.info(f"🎵 [Cover Mode] Selected '{cot_mode}' ABC sheet music: {chosen_abc.name}")
                         active_request["abc"] = chosen_abc.read_text(encoding="utf-8")
                     else:
-                        print(f"⚠️ [Warning] No .abc files found for cot '{cot_mode}' in directory {abc_path}. Reverting to standard generation.")
+                        main_logger.warning(f"No .abc files found for cot '{cot_mode}' in directory {abc_path}. Reverting to standard generation.")
                         active_request.pop("abc")
                         
                 elif abc_path.is_file():
-                    print(f"🎵 [Cover Mode] Loading ABC sheet music from: {abc_path}")
+                    main_logger.info(f"🎵 [Cover Mode] Loading ABC sheet music from: {abc_path}")
                     active_request["abc"] = abc_path.read_text(encoding="utf-8")
                     
                 else:
-                    print(f"⚠️ [Warning] ABC path not found at {abc_path}. Reverting to standard generation.")
+                    main_logger.warning(f"ABC path not found at {abc_path}. Reverting to standard generation.")
                     active_request.pop("abc")
 
             current_output_dir = args.output / f"track_{track_number:03d}"
@@ -470,30 +472,30 @@ def main():
             song.save_artifacts(current_output_dir)
             audio_path = current_output_dir / "audio.flac"
 
-            print(f"Track {track_number} rendered! Decoding audio into memory...")
+            main_logger.info(f"Track {track_number} rendered! Decoding audio into memory...")
 
             data, fs = sf.read(audio_path, dtype="float32")
             if data.ndim == 1:
                 data = np.column_stack([data, data])
 
             play_queue.put((data, fs, current_output_dir))
-            print(f"Track {track_number} queued for next crossfade.")
+            main_logger.info(f"Track {track_number} queued for next crossfade.")
 
             track_history.append(current_output_dir)
             if len(track_history) > 10:
                 old_track_dir = track_history.pop(0)
                 try:
                     shutil.rmtree(old_track_dir)
-                    print(f"Ring buffer: Deleted old track {old_track_dir.name} from disk.")
+                    main_logger.info(f"Ring buffer: Deleted old track {old_track_dir.name} from disk.")
                 except OSError as e:
-                    print(f"Ring buffer: Failed to delete {old_track_dir.name}: {e}")
+                    main_logger.error(f"Ring buffer: Failed to delete {old_track_dir.name}: {e}")
 
             track_number += 1
 
     except KeyboardInterrupt:
-        print("\n\n[Main] Shutdown signal received (Ctrl+C). Terminating gracefully...")
+        main_logger.info("Shutdown signal received (Ctrl+C). Terminating gracefully...")
     except Exception as e:
-        print(f"\n\n[Main] An unexpected error occurred: {e}")
+        main_logger.error(f"An unexpected error occurred: {e}", exc_info=True)
     finally:
         shutdown_event.set()
         pause_event.clear()
@@ -501,10 +503,10 @@ def main():
             del pipe
         torch.cuda.empty_cache()
 
-        print("[Main] Waiting for background processes to exit...")
+        main_logger.info("Waiting for background processes to exit...")
         watcher_thread.join(timeout=3)
         player_thread.join(timeout=3)
-        print("[Main] Infinite Radio has shut down safely.")
+        main_logger.info("Infinite Radio has shut down safely.")
 
 if __name__ == "__main__":
     main()
