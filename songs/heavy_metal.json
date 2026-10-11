@@ -1,0 +1,36 @@
+{
+  "id": "heavy_metal_cover",
+  "choices": {
+    "bpm": [130, 150, 170, 190]
+  },
+  "style": "{bpm}, heavy metal, thrash metal, aggressive distorted electric guitars, palm-muted chugging, double bass drum blast beats, heavy driving bassline, shredding guitar solo, dark, intense, mosh pit, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Distorted Guitar Intro]",
+      "[Heavy Riff Entry]",
+      "[Double Bass Drum Drop]",
+      "[Epic Guitar Solo]",
+      "[Half-time Breakdown]",
+      "[Final Heavy Climax]",
+      "[Feedback Outro]"
+    ],
+    [
+      "[Fast Drum Fill Intro]",
+      "[Speed Metal Riff]",
+      "[Aggressive Chugging]",
+      "[Shredding Lead Guitar]",
+      "[Massive Wall of Sound]",
+      "[Abrupt End]"
+    ],
+    [
+      "[Slow Heavy Intro]",
+      "[Building Tension]",
+      "[Explosive Drop]",
+      "[Melodic Metal Bridge]",
+      "[Chugging Breakdown]",
+      "[Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 666666
+}
