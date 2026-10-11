@@ -2,6 +2,7 @@ import argparse
 import yaml
 import torch 
 import json
+import random
 from pathlib import Path 
 from datetime import datetime
 from yue2 import YuE2Pipeline 
@@ -50,16 +51,13 @@ def merge_lora(bb, attn_name, mlp_name, tensors, scale=1.0, dev="cuda"):
 # ---------------------------- 
 
 def main(): 
-    # Just parse the config file path from the command line
     parser = argparse.ArgumentParser(description="Generate a song cover using a config file.") 
     parser.add_argument("--config", type=str, default="config.yaml", help="Path to the config.yaml file") 
     cmd_args = parser.parse_args() 
 
-    # Load configuration
     with open(cmd_args.config, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
         
-    # Extract config variables and cast them to correct types (Path, float, int, etc.)
     abc_path = Path(config.get("abc"))
     style = config.get("style")
     lyrics_input = config.get("lyrics")
@@ -70,7 +68,14 @@ def main():
     nar_lora_path = Path(config.get("nar_lora")) if config.get("nar_lora") else None
     nar_scale = float(config.get("nar_scale", 1.0))
     
-    seed = int(config.get("seed", 42))
+    # --- Random Seed Logic ---
+    raw_seed = config.get("seed", -1)
+    # Check if the seed is explicitly random, null, or -1
+    if raw_seed in [-1, None, "random"]:
+        seed = random.randint(0, 4294967295) # Max 32-bit unsigned integer
+    else:
+        seed = int(raw_seed)
+    
     cot = config.get("cot", "full")
 
     # 1. Load ABC content 
@@ -84,7 +89,7 @@ def main():
     output_dir = output_base / f"{abc_path.stem}_{timestamp}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save parameters to the new output folder
+    # Save parameters to the new output folder (will save the exact randomized seed used)
     saved_params = {
         "config_file_used": cmd_args.config,
         "abc_path": str(abc_path),
@@ -94,7 +99,7 @@ def main():
         "ar_scale": ar_scale,
         "nar_lora": str(nar_lora_path) if nar_lora_path else None,
         "nar_scale": nar_scale,
-        "seed": seed,
+        "seed": seed, # This will log the actual random seed used so you can reproduce it later!
         "cot": cot,
         "timestamp": timestamp
     }
@@ -102,7 +107,7 @@ def main():
     with open(output_dir / "parameters.yaml", "w", encoding="utf-8") as f:
         yaml.dump(saved_params, f, default_flow_style=False, sort_keys=False)
 
-    # 2. Load Lyrics (allows passing a text file or an inline string) 
+    # 2. Load Lyrics 
     lyrics_path = Path(lyrics_input) 
     if lyrics_path.is_file(): 
         lyrics_content = lyrics_path.read_text(encoding="utf-8") 
@@ -110,7 +115,6 @@ def main():
         print(f"❌ Error: Lyrics file '{lyrics_input}' not found. Check your spelling.") 
         return 
     else: 
-        # Otherwise, treat the input as literal lyric text 
         lyrics_content = lyrics_input 
 
     # 3. Print out all parameters being used 
