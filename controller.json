@@ -3,6 +3,7 @@
   "volume": 0.4,
   "pause": false,
   "skip": false,
+  "save": false,
   "ar_scale": 1.0,
   "nar_scale": 1.0,
   "abc": "/home/saltchicken/Music/chrono_trigger-schalas_theme-score/melody/chrono_trigger-schalas_theme-melody.abc",

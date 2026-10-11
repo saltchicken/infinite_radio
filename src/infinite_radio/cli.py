@@ -10,6 +10,7 @@ import numpy as np
 import sounddevice as sd
 import soundfile as sf
 from pathlib import Path
+from datetime import datetime
 from yue2 import YuE2Pipeline
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -63,8 +64,9 @@ def load_merged_config(request_path):
         "volume": 0.3,
         "pause": False,
         "skip": False,
+        "save": False,
         "ar_scale": 1.0,
-        "nar_scale": 1.0  # Added NAR scale default
+        "nar_scale": 1.0 
     }
     for k, v in playback_defaults.items():
         controller_data.setdefault(k, v)
@@ -82,12 +84,13 @@ def load_merged_config(request_path):
     return merged, controller_data
 
 class ConfigHandler(FileSystemEventHandler):
-    def __init__(self, request_path, shared_state, pause_event, skip_event, config_lock):
+    def __init__(self, request_path, shared_state, pause_event, skip_event, config_lock, playback_info):
         self.request_path = request_path.resolve()
         self.shared_state = shared_state
         self.pause_event = pause_event
         self.skip_event = skip_event
         self.config_lock = config_lock
+        self.playback_info = playback_info
 
     def on_any_event(self, event):
         if not event.is_directory and Path(event.src_path).resolve() == self.request_path:
@@ -102,9 +105,40 @@ class ConfigHandler(FileSystemEventHandler):
                 self.shared_state.clear()
                 self.shared_state.update(merged_data)
             
+            config_changed = False
+            
             if controller_data.get("skip", False):
                 self.skip_event.set()
                 controller_data["skip"] = False
+                config_changed = True
+                
+            if controller_data.get("save", False):
+                controller_data["save"] = False
+                config_changed = True
+                
+                curr_dir = self.playback_info.get("current_dir")
+                if curr_dir and curr_dir.exists():
+                    save_base = curr_dir.parent / "saved"
+                    save_base.mkdir(exist_ok=True)
+                    
+                    # Generate timestamp and append it to the original folder name
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    save_dest = save_base / f"{curr_dir.name}_{timestamp}"
+                    
+                    counter = 1
+                    while save_dest.exists():
+                        save_dest = save_base / f"{curr_dir.name}_{timestamp}_{counter}"
+                        counter += 1
+                        
+                    try:
+                        shutil.copytree(curr_dir, save_dest)
+                        print(f"\n[System] 💾 Saved currently playing track to: {save_dest}")
+                    except Exception as e:
+                        print(f"\n[System] ❌ Failed to save track: {e}")
+                else:
+                    print("\n[System] ⚠️ No track currently playing to save.")
+
+            if config_changed:
                 with open(self.request_path, "w", encoding="utf-8") as f:
                     json.dump(controller_data, f, indent=2)
 
@@ -115,8 +149,8 @@ class ConfigHandler(FileSystemEventHandler):
         except Exception:
             pass
 
-def config_watcher(request_path, shared_state, pause_event, skip_event, shutdown_event, config_lock):
-    event_handler = ConfigHandler(request_path, shared_state, pause_event, skip_event, config_lock)
+def config_watcher(request_path, shared_state, pause_event, skip_event, shutdown_event, config_lock, playback_info):
+    event_handler = ConfigHandler(request_path, shared_state, pause_event, skip_event, config_lock, playback_info)
     observer = Observer()
     observer.schedule(event_handler, path=str(request_path.parent.resolve()), recursive=False)
     observer.start()
@@ -127,7 +161,7 @@ def config_watcher(request_path, shared_state, pause_event, skip_event, shutdown
         observer.stop()
         observer.join()
 
-def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event, shutdown_event, crossfade_sec=6.0):
+def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event, shutdown_event, playback_info, crossfade_sec=6.0):
     stream = None
     current_tail = None
 
@@ -165,7 +199,8 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
     try:
         while not shutdown_event.is_set():
             try:
-                data, fs, track_name = play_queue.get(timeout=1.0)
+                data, fs, current_track_dir = play_queue.get(timeout=1.0)
+                playback_info["current_dir"] = current_track_dir
             except queue.Empty:
                 continue
 
@@ -183,7 +218,7 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
                 stream = sd.OutputStream(samplerate=fs, channels=data.shape[1], dtype="float32")
                 stream.start()
 
-            print(f"\n[Player] Transitioning into Track {track_name}...")
+            print(f"\n[Player] Transitioning into {current_track_dir.name}...")
 
             t = np.linspace(0.0, 1.0, fade_samples, dtype=np.float32)[:, None]
             fade_out = 1.0 - t
@@ -248,12 +283,14 @@ def main():
     shutdown_event = threading.Event()
     config_lock = threading.Lock()
     play_queue = queue.Queue()
+    
+    playback_info = {"current_dir": None}
 
     watcher_thread = threading.Thread(target=config_watcher,
-                                      args=(args.request, shared_state, pause_event, skip_event, shutdown_event, config_lock),
+                                      args=(args.request, shared_state, pause_event, skip_event, shutdown_event, config_lock, playback_info),
                                       daemon=True)
     player_thread = threading.Thread(target=audio_player,
-                                     args=(play_queue, shared_state, config_lock, pause_event, skip_event, shutdown_event, args.crossfade),
+                                     args=(play_queue, shared_state, config_lock, pause_event, skip_event, shutdown_event, playback_info, args.crossfade),
                                      daemon=True)
 
     watcher_thread.start()
@@ -288,8 +325,6 @@ def main():
             requested_ar_scale = float(active_request.get("ar_scale", 1.0))
             requested_nar_scale = float(active_request.get("nar_scale", 1.0))
 
-            # --- Dynamic Model Reloading ---
-            # Trigger a reload if the pipeline isn't loaded yet, or if the user changed either scale
             if pipe is None or current_ar_scale != requested_ar_scale or current_nar_scale != requested_nar_scale:
                 if pipe is not None:
                     print(f"\n🔄 [System] LoRA scale change detected (AR: {current_ar_scale} -> {requested_ar_scale}, NAR: {current_nar_scale} -> {requested_nar_scale}). Reloading model...")
@@ -325,6 +360,7 @@ def main():
             active_request.pop("pause", None)
             active_request.pop("skip", None)
             active_request.pop("volume", None)
+            active_request.pop("save", None)
             active_request.pop("active_style", None) 
             active_request.pop("ar_scale", None)
             active_request.pop("nar_scale", None)
@@ -343,7 +379,6 @@ def main():
                         chosen_val = str(random.choice(options))
                         active_request["style"] = active_request["style"].replace(f"{{{key}}}", chosen_val)
 
-            # --- ABC / Cover Logic ---
             if "abc" in active_request and active_request["abc"]:
                 abc_file = Path(active_request["abc"])
                 if abc_file.is_file():
@@ -370,8 +405,7 @@ def main():
             if data.ndim == 1:
                 data = np.column_stack([data, data])
 
-            track_name = audio_path.parent.name.split('_')[-1]
-            play_queue.put((data, fs, track_name))
+            play_queue.put((data, fs, current_output_dir))
             print(f"Track {track_number} queued for next crossfade.")
 
             track_history.append(current_output_dir)
