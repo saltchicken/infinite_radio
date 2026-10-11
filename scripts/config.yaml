@@ -1,0 +1,15 @@
+# Input / Output
+abc: "scripts/chrono_trigger-wind_scene-full.abc"
+lyrics: "scripts/lyrics_file.txt"
+style: "synthwave, 80s pop, retro drum machine, driving bassline"
+output: "outputs"
+
+# Generation Settings
+seed: 42
+cot: "full"
+
+# LoRA Settings (leave blank or null if not using)
+ar_lora: null # e.g., "path/to/ar_lora.safetensors"
+ar_scale: 1.0
+nar_lora: null # e.g., "path/to/nar_lora.safetensors"
+nar_scale: 1.0

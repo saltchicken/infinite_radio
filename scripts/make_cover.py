@@ -1,4 +1,5 @@
 import argparse 
+import yaml
 import torch 
 from pathlib import Path 
 from yue2 import YuE2Pipeline 
@@ -47,59 +48,66 @@ def merge_lora(bb, attn_name, mlp_name, tensors, scale=1.0, dev="cuda"):
 # ---------------------------- 
 
 def main(): 
-    parser = argparse.ArgumentParser(description="Generate a song cover using an ABC file and optional LoRAs.") 
-    parser.add_argument("--abc", type=Path, required=True, help="Path to the .abc sheet music file") 
-    parser.add_argument("--style", type=str, required=True, help="Style description string") 
-    parser.add_argument("--lyrics", type=str, required=True, help="Lyrics text, or path to a text file containing lyrics") 
-    parser.add_argument("--output", type=Path, default=Path("outputs/cover"), help="Output directory") 
-    
-    # LoRA arguments 
-    parser.add_argument("--ar-lora", type=Path, help="Path to the AR LoRA safetensors file") 
-    parser.add_argument("--ar-scale", type=float, default=1.0, help="Scale for the AR LoRA") 
-    parser.add_argument("--nar-lora", type=Path, help="Path to the NAR LoRA safetensors file") 
-    parser.add_argument("--nar-scale", type=float, default=1.0, help="Scale for the NAR LoRA") 
-    
-    # Generation arguments 
-    parser.add_argument("--seed", type=int, default=42, help="Seed for generation") 
-    parser.add_argument("--cot", type=str, default="full", help="Chain-of-thought mode") 
-    args = parser.parse_args() 
+    # Just parse the config file path from the command line
+    parser = argparse.ArgumentParser(description="Generate a song cover using a config file.") 
+    parser.add_argument("--config", type=str, default="config.yaml", help="Path to the config.yaml file") 
+    cmd_args = parser.parse_args() 
 
-    args.output.mkdir(parents=True, exist_ok=True) 
+    # Load configuration
+    with open(cmd_args.config, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+        
+    # Extract config variables and cast them to correct types (Path, float, int, etc.)
+    abc_path = Path(config.get("abc"))
+    style = config.get("style")
+    lyrics_input = config.get("lyrics")
+    output_base = Path(config.get("output", "outputs"))
+    
+    ar_lora_path = Path(config.get("ar_lora")) if config.get("ar_lora") else None
+    ar_scale = float(config.get("ar_scale", 1.0))
+    nar_lora_path = Path(config.get("nar_lora")) if config.get("nar_lora") else None
+    nar_scale = float(config.get("nar_scale", 1.0))
+    
+    seed = int(config.get("seed", 42))
+    cot = config.get("cot", "full")
 
     # 1. Load ABC content 
-    if not args.abc.exists(): 
-        print(f"❌ Error: ABC file not found at {args.abc}") 
+    if not abc_path.exists(): 
+        print(f"❌ Error: ABC file not found at {abc_path}") 
         return 
-    abc_content = args.abc.read_text(encoding="utf-8") 
+    abc_content = abc_path.read_text(encoding="utf-8") 
+
+    # --- Create output folder based on input name ---
+    output_dir = output_base / abc_path.stem
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # 2. Load Lyrics (allows passing a text file or an inline string) 
-    lyrics_path = Path(args.lyrics) 
+    lyrics_path = Path(lyrics_input) 
     if lyrics_path.is_file(): 
         lyrics_content = lyrics_path.read_text(encoding="utf-8") 
-    elif args.lyrics.endswith(".txt"): 
-        # If it looks like a text file but doesn't exist, throw an error 
-        print(f"❌ Error: Lyrics file '{args.lyrics}' not found. Check your spelling.") 
+    elif lyrics_input.endswith(".txt"): 
+        print(f"❌ Error: Lyrics file '{lyrics_input}' not found. Check your spelling.") 
         return 
     else: 
         # Otherwise, treat the input as literal lyric text 
-        lyrics_content = args.lyrics 
+        lyrics_content = lyrics_input 
 
     # 3. Print out all parameters being used 
     print(f"\n======================================") 
-    print(f"🎸 Generating Cover") 
+    print(f"🎸 Generating Cover (Config: {cmd_args.config})") 
     print(f"======================================") 
-    print(f"ABC Source : {args.abc}") 
-    print(f"Output Dir : {args.output}") 
-    print(f"Seed       : {args.seed}") 
-    print(f"CoT Mode   : {args.cot}") 
+    print(f"ABC Source : {abc_path}") 
+    print(f"Output Dir : {output_dir}") 
+    print(f"Seed       : {seed}") 
+    print(f"CoT Mode   : {cot}") 
     
-    if args.ar_lora: 
-        print(f"AR LoRA    : {args.ar_lora} (Scale: {args.ar_scale})") 
-    if args.nar_lora: 
-        print(f"NAR LoRA   : {args.nar_lora} (Scale: {args.nar_scale})") 
+    if ar_lora_path: 
+        print(f"AR LoRA    : {ar_lora_path} (Scale: {ar_scale})") 
+    if nar_lora_path: 
+        print(f"NAR LoRA   : {nar_lora_path} (Scale: {nar_scale})") 
         
     print(f"\n--- Style ---") 
-    print(args.style) 
+    print(style) 
     
     print(f"\n--- Lyrics ---") 
     print(lyrics_content.strip()) 
@@ -109,21 +117,21 @@ def main():
     with YuE2Pipeline.from_pretrained("m-a-p/YuE2-3B", vae="m-a-p/YuE2-Vae", device="cuda") as pipe: 
         
         # --- Inject LoRAs if specified --- 
-        if args.ar_lora or args.nar_lora: 
+        if ar_lora_path or nar_lora_path: 
             print("\n>>> Injecting LoRAs into the model...") 
             top_model = pipe._load_model() 
             bb = top_model.model 
             
-            if args.ar_lora and args.ar_lora.exists(): 
-                print(f"Loading AR LoRA from {args.ar_lora} (scale: {args.ar_scale})...") 
-                ar_data = load_ckpt(str(args.ar_lora), "cuda") 
-                n_merged = merge_lora(bb, "self_attn", "mlp", ar_data["lora"], scale=args.ar_scale, dev="cuda") 
+            if ar_lora_path and ar_lora_path.exists(): 
+                print(f"Loading AR LoRA from {ar_lora_path} (scale: {ar_scale})...") 
+                ar_data = load_ckpt(str(ar_lora_path), "cuda") 
+                n_merged = merge_lora(bb, "self_attn", "mlp", ar_data["lora"], scale=ar_scale, dev="cuda") 
                 print(f"✅ Merged {n_merged} AR LoRA linear layers.") 
 
-            if args.nar_lora and args.nar_lora.exists(): 
-                print(f"Loading NAR LoRA from {args.nar_lora} (scale: {args.nar_scale})...") 
-                nar_data = load_ckpt(str(args.nar_lora), "cuda") 
-                n_merged = merge_lora(bb, "nar_self_attn", "nar_mlp", nar_data["lora"], scale=args.nar_scale, dev="cuda") 
+            if nar_lora_path and nar_lora_path.exists(): 
+                print(f"Loading NAR LoRA from {nar_lora_path} (scale: {nar_scale})...") 
+                nar_data = load_ckpt(str(nar_lora_path), "cuda") 
+                n_merged = merge_lora(bb, "nar_self_attn", "nar_mlp", nar_data["lora"], scale=nar_scale, dev="cuda") 
                 
                 # Apply full replacement weights for VAE <-> LLM crossover 
                 top_model.vae2llm.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["vae2llm"].items()}) 
@@ -132,15 +140,15 @@ def main():
 
         print("\n>>> Generating audio...") 
         cover = pipe( 
-            style=args.style, 
+            style=style, 
             lyrics=lyrics_content, 
             abc=abc_content, 
-            cot=args.cot, 
-            seed=args.seed 
+            cot=cot, 
+            seed=seed 
         ) 
         
-        cover.save_artifacts(args.output) 
-        print(f"\n✅ Cover track saved to: {args.output}/audio.flac") 
+        cover.save_artifacts(output_dir) 
+        print(f"\n✅ Cover track saved to: {output_dir}/audio.flac") 
 
 if __name__ == "__main__": 
     main()

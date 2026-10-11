@@ -20,6 +20,7 @@ dependencies = [
     "yue2-infer @ git+https://github.com/multimodal-art-projection/YuE.git",
     "torch",
     "torchaudio",
+    "pyyaml"
 ]
 
 [project.scripts]
