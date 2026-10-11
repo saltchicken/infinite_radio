@@ -396,12 +396,12 @@ def main():
                     style_files = list(style_path.glob("*.json"))
                     if style_files:
                         chosen_style = smart_choice(style_files, style_history, max_memory=4)
-                        track_log_details.append(f"🎲 [Style Mode] Selected style: {chosen_style.name}")
+                        track_log_details.append(f"Style: {chosen_style.name}")
                         style_data = json.loads(chosen_style.read_text(encoding="utf-8"))
                     else:
                         main_logger.warning(f"No .json files found in style directory {style_path}.")
                 elif style_path.is_file():
-                    track_log_details.append(f"🎲 [Style Mode] Selected style: {style_path.name}")
+                    track_log_details.append(f"Style: {style_path.name}")
                     style_data = json.loads(style_path.read_text(encoding="utf-8"))
                 else:
                     main_logger.warning(f"Style path not found: {style_path}")
@@ -491,14 +491,14 @@ def main():
                         
                     if abc_files:
                         chosen_abc = smart_choice(abc_files, abc_history, max_memory=15)
-                        track_log_details.append(f"🎵 [Cover Mode] Selected '{cot_mode}' ABC sheet music: {chosen_abc.name}")
+                        track_log_details.append(f"Mode: '{cot_mode}', Score: {chosen_abc.name}")
                         raw_abc = chosen_abc.read_text(encoding="utf-8")
                     else:
                         main_logger.warning(f"No .abc files found for cot '{cot_mode}' in directory {abc_path}. Reverting to standard generation.")
                         active_request.pop("abc")
                         
                 elif abc_path.is_file():
-                    track_log_details.append(f"🎵 [Cover Mode] Loading ABC sheet music from: {abc_path.name}")
+                    track_log_details.append(f"Loading ABC sheet music from: {abc_path.name}")
                     raw_abc = abc_path.read_text(encoding="utf-8")
                     
                 else:
@@ -509,7 +509,7 @@ def main():
                     if inst_name is not None and midi_prog is not None:
                         edited_abc = force_instrumental_abc(raw_abc, inst_name, midi_prog)
                         active_request["abc"] = edited_abc
-                        track_log_details.append("📝 Live Edited ABC String applied (forced instrumental).")
+                        track_log_details.append("Live Edited ABC String applied (forced instrumental).")
                     else:
                         active_request["abc"] = raw_abc
             # ----------------------------------------
@@ -521,7 +521,7 @@ def main():
             with open(metadata_path, "w", encoding="utf-8") as f:
                 json.dump(active_request, f, indent=2)
 
-            combined_log = f"--- Generating Track {track_number} ---\n" + "\n".join(track_log_details)
+            combined_log = f"Generating Track {track_number} | " + " ".join(track_log_details)
             main_logger.info(combined_log)
 
             start_time = time.time()
