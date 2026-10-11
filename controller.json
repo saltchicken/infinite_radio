@@ -6,8 +6,8 @@
   "save": false,
   "ar_lora": "ar_lora_inst_v3abc.safetensors",
   "nar_lora": "nar_lora_joint_v4.safetensors",
-  "ar_scale": 1.0,
-  "nar_scale": 1.0,
-  "abc": "covers/",
+  "ar_scale": 0.5,
+  "nar_scale": 0.5,
+  "abc": "covers/vgm/",
   "cot": "melody"
 }
