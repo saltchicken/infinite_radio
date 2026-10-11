@@ -1,7 +1,9 @@
 import argparse 
 import yaml
 import torch 
+import json
 from pathlib import Path 
+from datetime import datetime
 from yue2 import YuE2Pipeline 
 
 # --- LoRA Loading Helpers --- 
@@ -77,9 +79,28 @@ def main():
         return 
     abc_content = abc_path.read_text(encoding="utf-8") 
 
-    # --- Create output folder based on input name ---
-    output_dir = output_base / abc_path.stem
+    # --- Create output folder with timestamp ---
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = output_base / f"{abc_path.stem}_{timestamp}"
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save parameters to the new output folder
+    saved_params = {
+        "config_file_used": cmd_args.config,
+        "abc_path": str(abc_path),
+        "style": style,
+        "lyrics_input": lyrics_input,
+        "ar_lora": str(ar_lora_path) if ar_lora_path else None,
+        "ar_scale": ar_scale,
+        "nar_lora": str(nar_lora_path) if nar_lora_path else None,
+        "nar_scale": nar_scale,
+        "seed": seed,
+        "cot": cot,
+        "timestamp": timestamp
+    }
+    
+    with open(output_dir / "parameters.yaml", "w", encoding="utf-8") as f:
+        yaml.dump(saved_params, f, default_flow_style=False, sort_keys=False)
 
     # 2. Load Lyrics (allows passing a text file or an inline string) 
     lyrics_path = Path(lyrics_input) 
@@ -149,6 +170,7 @@ def main():
         
         cover.save_artifacts(output_dir) 
         print(f"\n✅ Cover track saved to: {output_dir}/audio.flac") 
+        print(f"✅ Parameters saved to: {output_dir}/parameters.yaml")
 
 if __name__ == "__main__": 
     main()
