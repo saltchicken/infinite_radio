@@ -1,12 +1,13 @@
 # Input / Output
-abc: "/home/saltchicken/Music/chrono_trigger-frog_theme-score/melody/chrono_trigger-frog_theme-melody.abc"
+abc: "/home/saltchicken/Music/chrono_trigger-schalas_theme-score/full/chrono_trigger-schalas_theme-full.abc"
 lyrics: "lyrics_file.txt"
-style: "acid techno, hypnotic, Roland TB-303 squelch, resonant acid bassline, relentless four on the floor kick drum, underground warehouse rave, dark, aggressive, BGM, purely instrumental, zero vocals."
+style: "acid techno, hypnotic, Roland TB-303 squelch, resonant acid bassline, relentless four on the floor kick drum, underground warehouse rave, dark, aggressive, BGM, strictly instrumental."
+# style: "Epic cinematic orchestral trailer music, massive symphonic orchestra with soaring heroic strings, thunderous taiko drums and pounding orchestral percussion, dramatic brass fanfares, powerful angelic and dark choir, uplifting heroic cinematic soundscapes, massive epic climaxes, professional studio recording"
 output: "outputs"
 
 # Generation Settings
 seed: 44
-cot: "melody"
+cot: "full"
 
 # LoRA Settings (leave blank or null if not using)
 ar_lora: ../ar_lora_inst_v3abc.safetensors # e.g., "path/to/ar_lora.safetensors"

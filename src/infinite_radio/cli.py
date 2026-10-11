@@ -343,6 +343,16 @@ def main():
                         chosen_val = str(random.choice(options))
                         active_request["style"] = active_request["style"].replace(f"{{{key}}}", chosen_val)
 
+            # --- ABC / Cover Logic ---
+            if "abc" in active_request and active_request["abc"]:
+                abc_file = Path(active_request["abc"])
+                if abc_file.is_file():
+                    print(f"🎵 [Cover Mode] Loading ABC sheet music from: {abc_file}")
+                    active_request["abc"] = abc_file.read_text(encoding="utf-8")
+                else:
+                    print(f"⚠️ [Warning] ABC file not found at {abc_file}. Reverting to standard generation.")
+                    active_request.pop("abc")
+
             current_output_dir = args.output / f"track_{track_number:03d}"
             current_output_dir.mkdir(exist_ok=True)
 
