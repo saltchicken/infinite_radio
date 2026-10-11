@@ -2,14 +2,23 @@
 
 # Check if both arguments are provided using count
 if test (count $argv) -lt 2
-    echo "Usage: ./yt_to_sheetsage.fish <youtube-url> \"<song-name>\""
+    echo "Usage: ./yt_to_sheetsage.fish <youtube-url> \"<song-name>\" [subfolder]"
     exit 1
 end
 
 set YOUTUBE_URL $argv[1]
 set SONG_NAME $argv[2]
+set SUBFOLDER $argv[3] # This will be empty if not provided
+
+# Base directories
 set DATASET_DIR "/home/saltchicken/Music/music-dataset"
 set COVERS_DIR (pwd)"/covers"
+
+# If a subfolder argument is provided, append it to the paths
+if test -n "$SUBFOLDER"
+    set DATASET_DIR "$DATASET_DIR/$SUBFOLDER"
+    set COVERS_DIR "$COVERS_DIR/$SUBFOLDER"
+end
 
 # Define the absolute path to the sheetsage executable in your uv environment
 set SHEETSAGE_BIN (pwd)"/sheetsage/.venv/bin/sheetsage"
@@ -21,7 +30,7 @@ if not test -x "$SHEETSAGE_BIN"
     exit 1
 end
 
-# Ensure both the dataset and covers directories exist
+# Ensure both the dataset and covers directories exist (including the subfolder)
 mkdir -p "$DATASET_DIR"
 mkdir -p "$COVERS_DIR"
 
