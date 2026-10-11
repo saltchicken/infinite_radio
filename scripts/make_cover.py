@@ -174,7 +174,6 @@ def main():
         
         cover.save_artifacts(output_dir) 
         print(f"\n✅ Cover track saved to: {output_dir}/audio.flac") 
-        print(f"✅ Parameters saved to: {output_dir}/parameters.yaml")
 
 if __name__ == "__main__": 
     main()
