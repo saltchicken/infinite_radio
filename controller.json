@@ -9,5 +9,7 @@
   "ar_scale": 1.0,
   "nar_scale": 1.0,
   "abc": "covers/",
-  "cot": "melody"
+  "cot": "full",
+  "abc_instrument": "Lead Synth",
+  "abc_midi_program": 81
 }

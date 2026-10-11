@@ -10,6 +10,7 @@ import numpy as np
 import sounddevice as sd
 import soundfile as sf
 import logging
+import re
 from pathlib import Path
 from datetime import datetime
 from yue2 import YuE2Pipeline
@@ -25,6 +26,40 @@ logging.basicConfig(
 sys_logger = logging.getLogger("System")
 player_logger = logging.getLogger("Player")
 main_logger = logging.getLogger("Main")
+# -----------------------------
+
+# --- ABC Automation Helper ---
+def force_instrumental_abc(abc_text, instrument_name="Lead Synth", midi_program=81):
+    """Strips lyrics and forces a specific instrument/MIDI program in the ABC text."""
+    lines = abc_text.splitlines()
+    out_lines = []
+    
+    for line in lines:
+        stripped = line.lstrip()
+        # 1. Drop all lyric lines
+        if stripped.startswith('w:'):
+            continue
+            
+        # 2. Modify Voice lines to force instrument names
+        if stripped.startswith('V:'):
+            # Overwrite full name
+            if 'name=' in line:
+                line = re.sub(r'name="[^"]*"', f'name="{instrument_name}"', line)
+            else:
+                line = line.rstrip() + f' name="{instrument_name}"'
+                
+            # Overwrite short name (snm) to remove lingering "Vocal" triggers
+            if 'snm=' in line:
+                line = re.sub(r'snm="[^"]*"', f'snm="{instrument_name}"', line)
+                
+            out_lines.append(line)
+            # Inject standard MIDI directive immediately after the voice declaration
+            out_lines.append(f'%%MIDI program {midi_program}')
+            continue
+            
+        out_lines.append(line)
+        
+    return '\n'.join(out_lines)
 # -----------------------------
 
 # --- LoRA Loading Helpers ---
@@ -100,7 +135,7 @@ def load_controller_config(request_path):
         "skip": False,
         "save": False,
         "ar_scale": 1.0,
-        "nar_scale": 1.0 
+        "nar_scale": 1.0
     }
     for k, v in playback_defaults.items():
         controller_data.setdefault(k, v)
@@ -418,6 +453,10 @@ def main():
 
             active_request["seed"] = random.randint(0, 2**32 - 1)
             cot_mode = active_request.get("cot", "full")
+            
+            # --- Safely pop custom variables BEFORE pipeline execution ---
+            inst_name = active_request.pop("abc_instrument", None)
+            midi_prog = active_request.pop("abc_midi_program", None)
 
             for key in ["pause", "skip", "volume", "save", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora"]:
                 active_request.pop(key, None)
@@ -436,8 +475,10 @@ def main():
                         chosen_val = str(random.choice(options))
                         active_request["style"] = active_request["style"].replace(f"{{{key}}}", chosen_val)
 
+            # --- DYNAMIC ABC MODIFICATION BLOCK ---
             if "abc" in active_request and active_request["abc"]:
                 abc_path = Path(active_request["abc"])
+                raw_abc = None
                 
                 if abc_path.is_dir():
                     if cot_mode in ["full", "melody"]:
@@ -448,18 +489,28 @@ def main():
                     if abc_files:
                         chosen_abc = smart_choice(abc_files, abc_history, max_memory=15)
                         main_logger.info(f"🎵 [Cover Mode] Selected '{cot_mode}' ABC sheet music: {chosen_abc.name}")
-                        active_request["abc"] = chosen_abc.read_text(encoding="utf-8")
+                        raw_abc = chosen_abc.read_text(encoding="utf-8")
                     else:
                         main_logger.warning(f"No .abc files found for cot '{cot_mode}' in directory {abc_path}. Reverting to standard generation.")
                         active_request.pop("abc")
                         
                 elif abc_path.is_file():
                     main_logger.info(f"🎵 [Cover Mode] Loading ABC sheet music from: {abc_path}")
-                    active_request["abc"] = abc_path.read_text(encoding="utf-8")
+                    raw_abc = abc_path.read_text(encoding="utf-8")
                     
                 else:
                     main_logger.warning(f"ABC path not found at {abc_path}. Reverting to standard generation.")
                     active_request.pop("abc")
+                    
+                if raw_abc:
+                    if inst_name is not None and midi_prog is not None:
+                        edited_abc = force_instrumental_abc(raw_abc, inst_name, midi_prog)
+                        active_request["abc"] = edited_abc
+                        main_logger.info("📝 Live Edited ABC String applied (forced instrumental).")
+                    else:
+                        active_request["abc"] = raw_abc
+                        main_logger.info("📄 Passing raw ABC string untouched (no instrumental override parameters set).")
+            # ----------------------------------------
 
             current_output_dir = args.output / f"track_{track_number:03d}"
             current_output_dir.mkdir(exist_ok=True)
