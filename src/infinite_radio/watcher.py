@@ -35,8 +35,24 @@ class ConfigHandler(FileSystemEventHandler):
         self.playback_info = playback_info
 
     def on_any_event(self, event):
-        if not event.is_directory and Path(event.src_path).resolve() == self.request_path:
-            time.sleep(0.05)
+        if event.is_directory:
+            return
+
+        # Check if the event involves our file as either the source or destination (for atomic renames)
+        is_target = False
+        if hasattr(event, 'src_path') and Path(event.src_path).resolve() == self.request_path:
+            is_target = True
+        elif hasattr(event, 'dest_path') and Path(event.dest_path).resolve() == self.request_path:
+            is_target = True
+
+        if is_target:
+            # Give the text editor a split second to finish its atomic save swap
+            time.sleep(0.1)
+            
+            # If the file is temporarily gone (deleted before replacement), ignore this event
+            if not self.request_path.exists():
+                return
+                
             self.update_config()
 
     def update_config(self):
@@ -87,8 +103,14 @@ class ConfigHandler(FileSystemEventHandler):
                 self.pause_event.set()
             else:
                 self.pause_event.clear()
-        except Exception:
+
+        except FileNotFoundError:
+            # Catch in case the file vanishes between our exists() check and read_text()
             pass
+        except json.JSONDecodeError as e:
+            sys_logger.warning(f"⚠️ Malformed JSON detected in controller.json, ignoring until fixed: {e}")
+        except Exception as e:
+            sys_logger.error(f"❌ Unexpected error while updating config: {e}")
 
 def config_watcher(request_path, shared_state, pause_event, skip_event, shutdown_event, config_lock, playback_info):
     event_handler = ConfigHandler(request_path, shared_state, pause_event, skip_event, config_lock, playback_info)

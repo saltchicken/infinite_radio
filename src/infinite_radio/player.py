@@ -17,6 +17,22 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
             if skip_event.is_set():
                 skip_event.clear()
                 player_logger.info("⏭️ Skipping current track...")
+                
+                # Apply a quick 0.5-second linear fade-out before skipping
+                with config_lock:
+                    volume = float(shared_state.get("volume", 1.0))
+                fade_samples = int(0.5 * current_fs)
+                remaining = audio_data[i:i + fade_samples] * volume
+                
+                if len(remaining) > 0 and stream is not None:
+                    t = np.linspace(1.0, 0.0, len(remaining), dtype=np.float32)
+                    if remaining.ndim == 2:
+                        t = t[:, None]
+                    
+                    if not stream.active:
+                        stream.start()
+                    stream.write(remaining * t)
+                    
                 return "SKIP"
 
             while pause_event.is_set() and not shutdown_event.is_set():
