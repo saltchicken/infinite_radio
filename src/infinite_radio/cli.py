@@ -1,3 +1,4 @@
+import sys
 import torch
 import argparse
 import json
@@ -519,11 +520,50 @@ def main():
             with open(metadata_path, "w", encoding="utf-8") as f:
                 json.dump(active_request, f, indent=2)
 
-            song = pipe(**active_request)
+            main_logger.info(f"⚙️ Track {track_number} is generating...")
+            start_time = time.time()
+
+            # Filter to intercept and drop logs starting with [YuE2]
+            # Filter to intercept and drop logs containing [YuE2]
+            class StreamFilter:
+                def __init__(self, stream, target="[YuE2]"):
+                    self.stream = stream
+                    self.target = target
+                    self.buf = ""
+                def write(self, data):
+                    self.buf += data
+                    while "\n" in self.buf:
+                        line, self.buf = self.buf.split("\n", 1)
+                        # Check if the target is anywhere in the line (bypasses color codes)
+                        if self.target not in line:
+                            self.stream.write(line + "\n")
+                def flush(self):
+                    self.stream.flush()
+                def __getattr__(self, attr):
+                    # Passthrough for things like .isatty() needed by tqdm/progress bars
+                    return getattr(self.stream, attr)
+
+            original_stdout, original_stderr = sys.stdout, sys.stderr
+            sys.stdout = StreamFilter(sys.stdout)
+            sys.stderr = StreamFilter(sys.stderr)
+
+            try:
+                song = pipe(**active_request)
+            finally:
+                # Flush any remaining non-YuE2 text in the buffer, then restore streams
+                if getattr(sys.stdout, 'buf', None) and "[YuE2]" not in sys.stdout.buf:
+                    original_stdout.write(sys.stdout.buf)
+                if getattr(sys.stderr, 'buf', None) and "[YuE2]" not in sys.stderr.buf:
+                    original_stderr.write(sys.stderr.buf)
+                sys.stdout, sys.stderr = original_stdout, original_stderr
+
+            elapsed = time.time() - start_time
+            main_logger.info(f"✅ Track {track_number} finished generating in {elapsed:.2f} seconds.")
+
             song.save_artifacts(current_output_dir)
             audio_path = current_output_dir / "audio.flac"
 
-            main_logger.info(f"Track {track_number} rendered! Decoding audio into memory...")
+            main_logger.info(f"Track {track_number} artifacts saved! Decoding audio into memory...")
 
             data, fs = sf.read(audio_path, dtype="float32")
             if data.ndim == 1:
