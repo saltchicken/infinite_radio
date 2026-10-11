@@ -3,6 +3,7 @@ __pycache__
 
 outputs/
 cover-score/
+covers/
 
 *.abc
 *.lab

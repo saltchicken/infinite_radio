@@ -8,6 +8,6 @@
   "nar_lora": "nar_lora_joint_v4.safetensors",
   "ar_scale": 1.0,
   "nar_scale": 1.0,
-  "abc": "/home/saltchicken/Music/chrono_trigger-schalas_theme-score/melody/chrono_trigger-schalas_theme-melody.abc",
+  "abc": "covers/",
   "cot": "melody"
 }

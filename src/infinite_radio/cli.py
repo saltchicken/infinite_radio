@@ -374,6 +374,9 @@ def main():
 
             active_request["seed"] = random.randint(0, 2**32 - 1)
             
+            # Extract cot mode to use for file filtering (default to "full" if missing)
+            cot_mode = active_request.get("cot", "full")
+
             # Clean up the controller-specific fields before passing kwargs to the pipeline
             for key in ["pause", "skip", "volume", "save", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora"]:
                 active_request.pop(key, None)
@@ -393,12 +396,31 @@ def main():
                         active_request["style"] = active_request["style"].replace(f"{{{key}}}", chosen_val)
 
             if "abc" in active_request and active_request["abc"]:
-                abc_file = Path(active_request["abc"])
-                if abc_file.is_file():
-                    print(f"🎵 [Cover Mode] Loading ABC sheet music from: {abc_file}")
-                    active_request["abc"] = abc_file.read_text(encoding="utf-8")
+                abc_path = Path(active_request["abc"])
+                
+                # Check if the path is a directory
+                if abc_path.is_dir():
+                    # Filter for specific file suffixes if cot_mode is full or melody
+                    if cot_mode in ["full", "melody"]:
+                        abc_files = list(abc_path.rglob(f"*-{cot_mode}.abc"))
+                    else:
+                        abc_files = list(abc_path.rglob("*.abc"))
+                        
+                    if abc_files:
+                        chosen_abc = random.choice(abc_files)
+                        print(f"🎵 [Cover Mode] Randomly selected '{cot_mode}' ABC sheet music: {chosen_abc.name}")
+                        active_request["abc"] = chosen_abc.read_text(encoding="utf-8")
+                    else:
+                        print(f"⚠️ [Warning] No .abc files found for cot '{cot_mode}' in directory {abc_path}. Reverting to standard generation.")
+                        active_request.pop("abc")
+                        
+                # Check if the path is a specific file
+                elif abc_path.is_file():
+                    print(f"🎵 [Cover Mode] Loading ABC sheet music from: {abc_path}")
+                    active_request["abc"] = abc_path.read_text(encoding="utf-8")
+                    
                 else:
-                    print(f"⚠️ [Warning] ABC file not found at {abc_file}. Reverting to standard generation.")
+                    print(f"⚠️ [Warning] ABC path not found at {abc_path}. Reverting to standard generation.")
                     active_request.pop("abc")
 
             current_output_dir = args.output / f"track_{track_number:03d}"
