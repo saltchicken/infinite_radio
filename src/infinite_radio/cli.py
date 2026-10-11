@@ -57,7 +57,32 @@ def merge_lora(bb, attn_name, mlp_name, tensors, scale=1.0, dev="cuda"):
     return n_merged
 # ----------------------------
 
-def load_merged_config(request_path):
+# --- Smart Shuffle Helper ---
+def smart_choice(options, history, max_memory):
+    if not options:
+        return None
+    
+    # Filter out options that are in the history
+    available = [opt for opt in options if opt not in history]
+    
+    # If the history is so large it ate all our options, just exclude the immediate last played
+    if not available:
+        if len(options) > 1 and history:
+            available = [opt for opt in options if opt != history[-1]]
+        else:
+            available = options
+            
+    chosen = random.choice(available)
+    history.append(chosen)
+    
+    # Keep the history list from growing endlessly
+    while len(history) > max_memory:
+        history.pop(0)
+        
+    return chosen
+# ----------------------------
+
+def load_controller_config(request_path):
     controller_data = json.loads(request_path.read_text(encoding="utf-8"))
     
     playback_defaults = {
@@ -71,17 +96,7 @@ def load_merged_config(request_path):
     for k, v in playback_defaults.items():
         controller_data.setdefault(k, v)
 
-    style_data = {}
-    if "active_style" in controller_data:
-        style_path = request_path.parent / controller_data["active_style"]
-        if style_path.exists():
-            style_data = json.loads(style_path.read_text(encoding="utf-8"))
-        else:
-            print(f"\n[Warning] Style file not found: {style_path}")
-
-    merged = style_data.copy()
-    merged.update(controller_data)
-    return merged, controller_data
+    return controller_data
 
 class ConfigHandler(FileSystemEventHandler):
     def __init__(self, request_path, shared_state, pause_event, skip_event, config_lock, playback_info):
@@ -99,11 +114,11 @@ class ConfigHandler(FileSystemEventHandler):
 
     def update_config(self):
         try:
-            merged_data, controller_data = load_merged_config(self.request_path)
+            controller_data = load_controller_config(self.request_path)
             
             with self.config_lock:
                 self.shared_state.clear()
-                self.shared_state.update(merged_data)
+                self.shared_state.update(controller_data)
             
             config_changed = False
             
@@ -272,7 +287,7 @@ def main():
 
     shared_state = {}
     try:
-        initial_data, _ = load_merged_config(args.request)
+        initial_data = load_controller_config(args.request)
         shared_state.update(initial_data)
     except Exception as e:
         print(f"Error loading initial config: {e}. Ensure controller.json exists.")
@@ -308,6 +323,11 @@ def main():
     track_number = 1
     track_history = []  
 
+    # --- Initialize Smart Shuffle Histories ---
+    style_history = []
+    abc_history = []
+    # ------------------------------------------
+
     try:
         while not shutdown_event.is_set():
             while pause_event.is_set() and not shutdown_event.is_set():
@@ -322,12 +342,33 @@ def main():
                 continue
 
             with config_lock:
-                active_request = shared_state.copy()
+                controller_req = shared_state.copy()
+
+            # --- Dynamically Load & Merge Style per Track ---
+            style_data = {}
+            if "active_style" in controller_req and controller_req["active_style"]:
+                style_path = args.request.parent / controller_req["active_style"]
+                if style_path.is_dir():
+                    style_files = list(style_path.glob("*.json"))
+                    if style_files:
+                        # Smart choice: remembers the last 4 styles played
+                        chosen_style = smart_choice(style_files, style_history, max_memory=4)
+                        print(f"🎲 [Style Mode] Selected style: {chosen_style.name}")
+                        style_data = json.loads(chosen_style.read_text(encoding="utf-8"))
+                    else:
+                        print(f"⚠️ [Warning] No .json files found in style directory {style_path}.")
+                elif style_path.is_file():
+                    style_data = json.loads(style_path.read_text(encoding="utf-8"))
+                else:
+                    print(f"⚠️ [Warning] Style path not found: {style_path}")
+
+            active_request = style_data.copy()
+            active_request.update(controller_req)
+            # -------------------------------------------------
 
             requested_ar_scale = float(active_request.get("ar_scale", 1.0))
             requested_nar_scale = float(active_request.get("nar_scale", 1.0))
             
-            # Read LoRAs from JSON, fallback to args if not present/empty
             req_ar_lora_str = active_request.get("ar_lora", "")
             req_nar_lora_str = active_request.get("nar_lora", "")
             
@@ -373,11 +414,8 @@ def main():
             print(f"\n--- Generating Track {track_number} ---")
 
             active_request["seed"] = random.randint(0, 2**32 - 1)
-            
-            # Extract cot mode to use for file filtering (default to "full" if missing)
             cot_mode = active_request.get("cot", "full")
 
-            # Clean up the controller-specific fields before passing kwargs to the pipeline
             for key in ["pause", "skip", "volume", "save", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora"]:
                 active_request.pop(key, None)
 
@@ -398,23 +436,21 @@ def main():
             if "abc" in active_request and active_request["abc"]:
                 abc_path = Path(active_request["abc"])
                 
-                # Check if the path is a directory
                 if abc_path.is_dir():
-                    # Filter for specific file suffixes if cot_mode is full or melody
                     if cot_mode in ["full", "melody"]:
                         abc_files = list(abc_path.rglob(f"*-{cot_mode}.abc"))
                     else:
                         abc_files = list(abc_path.rglob("*.abc"))
                         
                     if abc_files:
-                        chosen_abc = random.choice(abc_files)
-                        print(f"🎵 [Cover Mode] Randomly selected '{cot_mode}' ABC sheet music: {chosen_abc.name}")
+                        # Smart choice: remembers the last 15 songs played
+                        chosen_abc = smart_choice(abc_files, abc_history, max_memory=15)
+                        print(f"🎵 [Cover Mode] Selected '{cot_mode}' ABC sheet music: {chosen_abc.name}")
                         active_request["abc"] = chosen_abc.read_text(encoding="utf-8")
                     else:
                         print(f"⚠️ [Warning] No .abc files found for cot '{cot_mode}' in directory {abc_path}. Reverting to standard generation.")
                         active_request.pop("abc")
                         
-                # Check if the path is a specific file
                 elif abc_path.is_file():
                     print(f"🎵 [Cover Mode] Loading ABC sheet music from: {abc_path}")
                     active_request["abc"] = abc_path.read_text(encoding="utf-8")
