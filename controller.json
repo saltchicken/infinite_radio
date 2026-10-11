@@ -4,6 +4,8 @@
   "pause": false,
   "skip": false,
   "save": false,
+  "ar_lora": "ar_lora_inst_v3abc.safetensors",
+  "nar_lora": "nar_lora_joint_v4.safetensors",
   "ar_scale": 1.0,
   "nar_scale": 1.0,
   "abc": "/home/saltchicken/Music/chrono_trigger-schalas_theme-score/melody/chrono_trigger-schalas_theme-melody.abc",

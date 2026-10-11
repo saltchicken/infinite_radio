@@ -303,6 +303,8 @@ def main():
     pipe = None
     current_ar_scale = None
     current_nar_scale = None
+    current_ar_lora = None
+    current_nar_lora = None
     track_number = 1
     track_history = []  
 
@@ -324,10 +326,22 @@ def main():
 
             requested_ar_scale = float(active_request.get("ar_scale", 1.0))
             requested_nar_scale = float(active_request.get("nar_scale", 1.0))
+            
+            # Read LoRAs from JSON, fallback to args if not present/empty
+            req_ar_lora_str = active_request.get("ar_lora", "")
+            req_nar_lora_str = active_request.get("nar_lora", "")
+            
+            requested_ar_lora = Path(req_ar_lora_str) if req_ar_lora_str else args.ar_lora
+            requested_nar_lora = Path(req_nar_lora_str) if req_nar_lora_str else args.nar_lora
 
-            if pipe is None or current_ar_scale != requested_ar_scale or current_nar_scale != requested_nar_scale:
+            if (pipe is None or 
+                current_ar_scale != requested_ar_scale or 
+                current_nar_scale != requested_nar_scale or
+                current_ar_lora != requested_ar_lora or
+                current_nar_lora != requested_nar_lora):
+                
                 if pipe is not None:
-                    print(f"\n🔄 [System] LoRA scale change detected (AR: {current_ar_scale} -> {requested_ar_scale}, NAR: {current_nar_scale} -> {requested_nar_scale}). Reloading model...")
+                    print(f"\n🔄 [System] LoRA configuration change detected. Reloading model...")
                     del pipe
                     torch.cuda.empty_cache()
                 else:
@@ -337,15 +351,15 @@ def main():
                 top_model = pipe._load_model()
                 bb = top_model.model
                 
-                if args.ar_lora and args.ar_lora.exists():
-                    print(f"Loading AR LoRA from {args.ar_lora.name}...")
-                    ar_data = load_ckpt(str(args.ar_lora), "cuda")
+                if requested_ar_lora and requested_ar_lora.exists():
+                    print(f"Loading AR LoRA from {requested_ar_lora.name}...")
+                    ar_data = load_ckpt(str(requested_ar_lora), "cuda")
                     n_merged = merge_lora(bb, "self_attn", "mlp", ar_data["lora"], scale=requested_ar_scale, dev="cuda")
                     print(f"Merged {n_merged} AR LoRA linear layers (scale: {requested_ar_scale}).")
                 
-                if args.nar_lora and args.nar_lora.exists():
-                    print(f"Loading NAR LoRA from {args.nar_lora.name}...")
-                    nar_data = load_ckpt(str(args.nar_lora), "cuda")
+                if requested_nar_lora and requested_nar_lora.exists():
+                    print(f"Loading NAR LoRA from {requested_nar_lora.name}...")
+                    nar_data = load_ckpt(str(requested_nar_lora), "cuda")
                     n_merged = merge_lora(bb, "nar_self_attn", "nar_mlp", nar_data["lora"], scale=requested_nar_scale, dev="cuda")
                     top_model.vae2llm.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["vae2llm"].items()})
                     top_model.llm2vae.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["llm2vae"].items()})
@@ -353,17 +367,16 @@ def main():
 
                 current_ar_scale = requested_ar_scale
                 current_nar_scale = requested_nar_scale
+                current_ar_lora = requested_ar_lora
+                current_nar_lora = requested_nar_lora
 
             print(f"\n--- Generating Track {track_number} ---")
 
             active_request["seed"] = random.randint(0, 2**32 - 1)
-            active_request.pop("pause", None)
-            active_request.pop("skip", None)
-            active_request.pop("volume", None)
-            active_request.pop("save", None)
-            active_request.pop("active_style", None) 
-            active_request.pop("ar_scale", None)
-            active_request.pop("nar_scale", None)
+            
+            # Clean up the controller-specific fields before passing kwargs to the pipeline
+            for key in ["pause", "skip", "volume", "save", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora"]:
+                active_request.pop(key, None)
 
             if isinstance(active_request.get("lyrics"), list):
                 chosen = random.choice(active_request["lyrics"])
