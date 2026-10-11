@@ -386,6 +386,9 @@ def main():
             with config_lock:
                 controller_req = shared_state.copy()
 
+            # Array to collect log statements for this track
+            track_log_details = []
+
             style_data = {}
             if "active_style" in controller_req and controller_req["active_style"]:
                 style_path = args.request.parent / controller_req["active_style"]
@@ -393,11 +396,12 @@ def main():
                     style_files = list(style_path.glob("*.json"))
                     if style_files:
                         chosen_style = smart_choice(style_files, style_history, max_memory=4)
-                        main_logger.info(f"🎲 [Style Mode] Selected style: {chosen_style.name}")
+                        track_log_details.append(f"🎲 [Style Mode] Selected style: {chosen_style.name}")
                         style_data = json.loads(chosen_style.read_text(encoding="utf-8"))
                     else:
                         main_logger.warning(f"No .json files found in style directory {style_path}.")
                 elif style_path.is_file():
+                    track_log_details.append(f"🎲 [Style Mode] Selected style: {style_path.name}")
                     style_data = json.loads(style_path.read_text(encoding="utf-8"))
                 else:
                     main_logger.warning(f"Style path not found: {style_path}")
@@ -450,8 +454,6 @@ def main():
                 current_ar_lora = requested_ar_lora
                 current_nar_lora = requested_nar_lora
 
-            main_logger.info(f"--- Generating Track {track_number} ---")
-
             active_request["seed"] = random.randint(0, 2**32 - 1)
             cot_mode = active_request.get("cot", "full")
             
@@ -489,14 +491,14 @@ def main():
                         
                     if abc_files:
                         chosen_abc = smart_choice(abc_files, abc_history, max_memory=15)
-                        main_logger.info(f"🎵 [Cover Mode] Selected '{cot_mode}' ABC sheet music: {chosen_abc.name}")
+                        track_log_details.append(f"🎵 [Cover Mode] Selected '{cot_mode}' ABC sheet music: {chosen_abc.name}")
                         raw_abc = chosen_abc.read_text(encoding="utf-8")
                     else:
                         main_logger.warning(f"No .abc files found for cot '{cot_mode}' in directory {abc_path}. Reverting to standard generation.")
                         active_request.pop("abc")
                         
                 elif abc_path.is_file():
-                    main_logger.info(f"🎵 [Cover Mode] Loading ABC sheet music from: {abc_path}")
+                    track_log_details.append(f"🎵 [Cover Mode] Loading ABC sheet music from: {abc_path.name}")
                     raw_abc = abc_path.read_text(encoding="utf-8")
                     
                 else:
@@ -507,10 +509,10 @@ def main():
                     if inst_name is not None and midi_prog is not None:
                         edited_abc = force_instrumental_abc(raw_abc, inst_name, midi_prog)
                         active_request["abc"] = edited_abc
-                        main_logger.info("📝 Live Edited ABC String applied (forced instrumental).")
+                        track_log_details.append("📝 Live Edited ABC String applied (forced instrumental).")
                     else:
                         active_request["abc"] = raw_abc
-                        main_logger.info("📄 Passing raw ABC string untouched (no instrumental override parameters set).")
+                        track_log_details.append("📄 Passing raw ABC string untouched (no instrumental override parameters set).")
             # ----------------------------------------
 
             current_output_dir = args.output / f"track_{track_number:03d}"
@@ -520,10 +522,13 @@ def main():
             with open(metadata_path, "w", encoding="utf-8") as f:
                 json.dump(active_request, f, indent=2)
 
-            main_logger.info(f"⚙️ Track {track_number} is generating...")
+            # Append the final generating line and print out the grouped log block
+            track_log_details.append(f"⚙️ Track {track_number} is generating...")
+            combined_log = f"--- Generating Track {track_number} ---\n" + "\n".join(track_log_details)
+            main_logger.info(combined_log)
+
             start_time = time.time()
 
-            # Filter to intercept and drop logs starting with [YuE2]
             # Filter to intercept and drop logs containing [YuE2]
             class StreamFilter:
                 def __init__(self, stream, target="[YuE2]"):
@@ -562,8 +567,6 @@ def main():
 
             song.save_artifacts(current_output_dir)
             audio_path = current_output_dir / "audio.flac"
-
-            main_logger.info(f"Track {track_number} artifacts saved! Decoding audio into memory...")
 
             data, fs = sf.read(audio_path, dtype="float32")
             if data.ndim == 1:
