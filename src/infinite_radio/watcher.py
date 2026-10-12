@@ -1,3 +1,4 @@
+# src/infinite_radio/watcher.py
 import json
 import time
 import shutil
@@ -106,22 +107,15 @@ class ConfigHandler(FileSystemEventHandler):
                                         "value": feature_val,
                                         "track": curr_dir.name
                                     }
+
+                                    # Include lyrics in the same record if voting on a style
+                                    if feature == "style" and meta_data.get("lyrics"):
+                                        vote_record["lyrics"] = meta_data.get("lyrics")
+
                                     f.write(json.dumps(vote_record) + "\n")
                                     
                                     icon = "⭐" if vote_type == "up" else "👎"
                                     sys_logger.info(f"{icon} {vote_type.title()}voted {feature}! Saved to {votes_file.name}")
-                                    
-                                    # Implicitly log the lyrics alongside the style if they exist
-                                    if feature == "style" and meta_data.get("lyrics"):
-                                        lyrics_record = {
-                                            "timestamp": datetime.now().isoformat(),
-                                            "vote": vote_type,
-                                            "feature": "lyrics",
-                                            "value": meta_data.get("lyrics"),
-                                            "track": curr_dir.name
-                                        }
-                                        f.write(json.dumps(lyrics_record) + "\n")
-                                        sys_logger.info(f"{icon} implicitly {vote_type.title()}voted lyrics! Saved to {votes_file.name}")
                                         
                         except Exception as e:
                             sys_logger.error(f"❌ Failed to process votes: {e}")
