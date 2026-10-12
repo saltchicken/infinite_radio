@@ -130,6 +130,9 @@ def main():
             with config_lock:
                 controller_req = shared_state.copy()
 
+            chosen_style_path = None
+            chosen_abc_path = None
+
             track_log_details = []
             style_data = {}
             if "active_style" in controller_req and controller_req["active_style"]:
@@ -151,6 +154,7 @@ def main():
                     # Deduplicate in case overlapping directories were requested
                     style_files = list(set(style_files))
                     chosen_style = smart_choice(style_files, style_history, max_memory=4)
+                    chosen_style_path = str(chosen_style)
                     track_log_details.append(f"Style: {chosen_style.parent.name}/{chosen_style.name}")
                     style_data = json.loads(chosen_style.read_text(encoding="utf-8"))
                 else:
@@ -207,7 +211,7 @@ def main():
             inst_name = active_request.pop("abc_instrument", None)
             midi_prog = active_request.pop("abc_midi_program", None)
 
-            for key in ["pause", "skip", "volume", "save", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora"]:
+            for key in ["pause", "skip", "volume", "save", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora", "vote_style", "vote_abc"]:
                 active_request.pop(key, None)
 
             if isinstance(active_request.get("lyrics"), list):
@@ -244,6 +248,7 @@ def main():
                 if abc_files:
                     abc_files = list(set(abc_files))
                     chosen_abc = smart_choice(abc_files, abc_history, max_memory=15)
+                    chosen_abc_path = str(chosen_abc)
                     track_log_details.append(f"Mode: '{cot_mode}' | Score: {chosen_abc.parent.name}/{chosen_abc.name}")
                     raw_abc = chosen_abc.read_text(encoding="utf-8")
                 else:
@@ -260,9 +265,14 @@ def main():
             current_output_dir = args.output / f"track_{track_number:03d}"
             current_output_dir.mkdir(exist_ok=True)
 
+            # Create a separate dictionary to save metadata so we don't pollute the YuE2 kwargs
+            metadata_to_save = active_request.copy()
+            metadata_to_save["_source_style"] = chosen_style_path
+            metadata_to_save["_source_abc"] = chosen_abc_path
+
             metadata_path = current_output_dir / "metadata.json"
             with open(metadata_path, "w", encoding="utf-8") as f:
-                json.dump(active_request, f, indent=2)
+                json.dump(metadata_to_save, f, indent=2)
 
             combined_log = f"Generating Track {track_number} | " + " ".join(track_log_details)
             main_logger.info(combined_log)

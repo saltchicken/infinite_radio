@@ -17,6 +17,8 @@ def load_controller_config(request_path):
         "pause": False,
         "skip": False,
         "save": False,
+        "vote_style": "",
+        "vote_abc": "",
         "ar_scale": 1.0,
         "nar_scale": 1.0
     }
@@ -69,6 +71,65 @@ class ConfigHandler(FileSystemEventHandler):
                 self.skip_event.set()
                 controller_data["skip"] = False
                 config_changed = True
+
+            # --- START VOTING LOGIC ---
+            votes_to_process = []
+            for feature in ["style", "abc"]:
+                vote_val = str(controller_data.get(f"vote_{feature}", "")).strip().lower()
+                
+                if vote_val in ["up", "down"]:
+                    votes_to_process.append((feature, vote_val))
+                    controller_data[f"vote_{feature}"] = ""
+                    config_changed = True
+
+            if votes_to_process:
+                curr_dir = self.playback_info.get("current_dir")
+                if curr_dir and curr_dir.exists():
+                    meta_path = curr_dir / "metadata.json"
+                    if meta_path.exists():
+                        try:
+                            meta_data = json.loads(meta_path.read_text(encoding="utf-8"))
+                            votes_file = self.request_path.parent / "votes.jsonl"
+                            
+                            with open(votes_file, "a", encoding="utf-8") as f:
+                                for feature, vote_type in votes_to_process:
+                                    
+                                    if feature == "style":
+                                        feature_val = meta_data.get("_source_style")
+                                    else:
+                                        feature_val = meta_data.get("_source_abc")
+                                        
+                                    vote_record = {
+                                        "timestamp": datetime.now().isoformat(),
+                                        "vote": vote_type,
+                                        "feature": feature,
+                                        "value": feature_val,
+                                        "track": curr_dir.name
+                                    }
+                                    f.write(json.dumps(vote_record) + "\n")
+                                    
+                                    icon = "⭐" if vote_type == "up" else "👎"
+                                    sys_logger.info(f"{icon} {vote_type.title()}voted {feature}! Saved to {votes_file.name}")
+                                    
+                                    # Implicitly log the lyrics alongside the style if they exist
+                                    if feature == "style" and meta_data.get("lyrics"):
+                                        lyrics_record = {
+                                            "timestamp": datetime.now().isoformat(),
+                                            "vote": vote_type,
+                                            "feature": "lyrics",
+                                            "value": meta_data.get("lyrics"),
+                                            "track": curr_dir.name
+                                        }
+                                        f.write(json.dumps(lyrics_record) + "\n")
+                                        sys_logger.info(f"{icon} implicitly {vote_type.title()}voted lyrics! Saved to {votes_file.name}")
+                                        
+                        except Exception as e:
+                            sys_logger.error(f"❌ Failed to process votes: {e}")
+                    else:
+                        sys_logger.warning("⚠️ No metadata.json found for the current track to vote on.")
+                else:
+                    sys_logger.warning("⚠️ No track currently playing to vote on.")
+            # --- END VOTING LOGIC ---
 
             if controller_data.get("save", False):
                 controller_data["save"] = False

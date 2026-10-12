@@ -11,4 +11,6 @@ covers/
 *.tsv
 *.mp3
 
+*.jsonl
+
 *.safetensors
