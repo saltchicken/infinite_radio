@@ -1,3 +1,11 @@
+"abc_instrument": "Lead Synth",
+"abc_midi_program": 81
+
+
+
+
+
+
 ### Pianos & Keyboards (0-7)
 0: Acoustic Grand Piano
 1: Bright Acoustic Piano
@@ -157,3 +165,4 @@
 125: Helicopter
 126: Applause
 127: Gunshot
+
