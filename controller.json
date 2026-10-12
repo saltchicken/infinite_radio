@@ -1,5 +1,8 @@
 {
-  "active_style": "songs/",
+  "active_style": [
+    "songs/drum_and_bass/",
+    "songs/trance_and_psy/"
+  ],
   "volume": 0.4,
   "pause": false,
   "skip": false,
