@@ -36,10 +36,21 @@ class StreamFilter:
 
     def write(self, data):
         self.buf += data
-        while "\n" in self.buf:
-            line, self.buf = self.buf.split("\n", 1)
+        
+        # Process both newlines and carriage returns
+        while True:
+            if "\n" in self.buf:
+                splitter = "\n"
+            elif "\r" in self.buf:
+                splitter = "\r"
+            else:
+                break
+                
+            line, self.buf = self.buf.split(splitter, 1)
+            
             if self.target not in line:
-                self.stream.write(line + "\n")
+                self.stream.write(line + splitter)
+                self.stream.flush() # Force terminal to render the update
 
     def flush(self):
         self.stream.flush()
