@@ -1,0 +1,35 @@
+{
+  "id": "acid_psy_disco",
+  "choices": {
+    "bpm": [124, 126, 128]
+  },
+  "style": "{bpm}, acid disco, psy-funk, slap bass, resonant 303 synthesizer squelch, funky rhythm guitar, driving four on the floor kick, psychedelic, upbeat groove, neon underground, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Drum Machine Intro]",
+      "[Funky Slap Bass Entry]",
+      "[Subtle 303 Acid Sequence]",
+      "[Filter Opening Build-up]",
+      "[Massive Acid Funk Drop]",
+      "[Groovy Outro]"
+    ],
+    [
+      "[Wah-Pedal Guitar Intro]",
+      "[Upbeat Disco Kick Drum]",
+      "[Resonant Acid Lead Takeover]",
+      "[Psychedelic Synth Breakdown]",
+      "[High Energy Dance Climax]",
+      "[Sudden End]"
+    ],
+    [
+      "[Pulsing Bassline Intro]",
+      "[Syncopated Funk Chords]",
+      "[Aggressive 303 Squelch Solo]",
+      "[Percussion Break]",
+      "[Final Psychedelic Groove]",
+      "[Echoing Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 303126
+}

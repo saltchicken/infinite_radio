@@ -1,0 +1,35 @@
+{
+  "id": "industrial_crossbreed_dnb",
+  "choices": {
+    "bpm": [175, 180, 185]
+  },
+  "style": "{bpm}, crossbreed drum and bass, industrial hardcore, heavily distorted kicks, aggressive neurofunk reese bass, frenetic breakbeats, dark dystopian atmosphere, mechanical, punishing, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Dark Factory Ambience]",
+      "[Slow Distorted Kick Intro]",
+      "[Fast Snare Roll Build]",
+      "[Explosive Crossbreed Drop]",
+      "[Frenetic Drum Break Edit]",
+      "[Harsh Noise Outro]"
+    ],
+    [
+      "[Ominous Alarm Intro]",
+      "[Grinding Bass Synth]",
+      "[Hard Techno Kick Pattern]",
+      "[Sudden Double-Time Breakbeat]",
+      "[Relentless Groove]",
+      "[Abrupt End]"
+    ],
+    [
+      "[Eerie Drone Intro]",
+      "[Syncopated Industrial Percussion]",
+      "[Massive Modulated Bass Drop]",
+      "[Chaotic Drum Solo]",
+      "[Heavy Half-Time Breakdown]",
+      "[Mechanical Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 909180
+}

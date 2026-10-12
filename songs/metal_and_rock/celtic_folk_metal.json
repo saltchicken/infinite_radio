@@ -1,0 +1,36 @@
+{
+  "id": "celtic_folk_metal",
+  "choices": {
+    "bpm": [140, 150, 160]
+  },
+  "style": "{bpm}, celtic folk metal, aggressive distorted guitars, fast double bass drums, lively fiddle and tin whistle, epic fantasy battle, energetic, fast-paced, heavy, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Solo Fiddle Intro]",
+      "[Heavy Guitar Riff Entry]",
+      "[Double Bass Drum Gallop]",
+      "[Tin Whistle and Guitar Harmony]",
+      "[Folk Dance Breakdown]",
+      "[Heavy Climax]",
+      "[Final Stomp]"
+    ],
+    [
+      "[Acoustic Guitar and Flute Intro]",
+      "[Explosive Metal Drop]",
+      "[Fast Jig Melody on Distorted Guitar]",
+      "[Trading Fiddle and Guitar Solos]",
+      "[Acoustic Bridge]",
+      "[Massive Ensemble Finish]"
+    ],
+    [
+      "[Marching Snare Drum Build]",
+      "[Distorted Bagpipe Synth]",
+      "[Thrash Metal Riff]",
+      "[Lively Tavern Melody]",
+      "[Epic Crescendo]",
+      "[Feedback Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 1732666
+}

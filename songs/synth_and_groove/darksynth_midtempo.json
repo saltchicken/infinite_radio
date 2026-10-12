@@ -1,0 +1,35 @@
+{
+  "id": "darksynth_midtempo",
+  "choices": {
+    "bpm": [100, 105, 110]
+  },
+  "style": "{bpm}, darksynth, midtempo bass, heavy distortion, evil analog synthesizers, crushing snare drum, cyberpunk aesthetic, apocalyptic, aggressive, cinematic, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Ominous Cyberpunk Drone]",
+      "[Slow Pounding Kick Drum]",
+      "[Heavy Distorted Bass Drop]",
+      "[Aggressive Synth Lead]",
+      "[Cinematic Breakdown]",
+      "[Final Crushing Drop]",
+      "[Mechanical Fade]"
+    ],
+    [
+      "[Distorted Arpeggio Intro]",
+      "[Rising Tension]",
+      "[Explosive Midtempo Drop]",
+      "[Glitchy Synths]",
+      "[Dark Ambient Outro]"
+    ],
+    [
+      "[Alarm Sound FX Intro]",
+      "[Heavy Industrial Stomp]",
+      "[Grinding Bassline Entry]",
+      "[Tension Building Riser]",
+      "[Massive Wall of Noise]",
+      "[Echoing Sub Bass]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 2077999
+}

@@ -1,0 +1,35 @@
+{
+  "id": "djent_prog_metal",
+  "choices": {
+    "bpm": [130, 140, 150]
+  },
+  "style": "{bpm}, djent, progressive metal, heavily syncopated low-tuned guitars, complex polyrhythms, aggressive bass, ambient guitar leads, intense, modern metal, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Ambient Clean Guitar Intro]",
+      "[Sudden Heavy Polyrhythmic Riff]",
+      "[Syncopated Groove]",
+      "[Soaring Lead Guitar Solo]",
+      "[Chugging Breakdown]",
+      "[Abrupt End]"
+    ],
+    [
+      "[Drum Fill Intro]",
+      "[Low-Tuned Guitar Chug]",
+      "[Complex Time Signature Riff]",
+      "[Atmospheric Bridge]",
+      "[Massive Wall of Sound Climax]",
+      "[Fade Out]"
+    ],
+    [
+      "[Tension Building Bass Intro]",
+      "[Blast Beat Entry]",
+      "[Aggressive Groove]",
+      "[Melodic Guitar Tapping]",
+      "[Earth-Shattering Breakdown]",
+      "[Sudden Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 888111
+}

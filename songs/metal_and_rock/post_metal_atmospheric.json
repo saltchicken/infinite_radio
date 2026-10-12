@@ -1,0 +1,35 @@
+{
+  "id": "post_metal_atmospheric",
+  "choices": {
+    "bpm": [75, 85, 95]
+  },
+  "style": "{bpm}, post-metal, atmospheric sludge, slow crushing doom riffs, expansive post-rock delay guitars, heavy tom drums, immense wall of sound, melancholic, dark, triumphant, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Clean Delay Guitar Intro]",
+      "[Ominous Bass Entry]",
+      "[Slow Marching Drums]",
+      "[Distortion Pedal Click]",
+      "[Crushing Heavy Riff Drop]",
+      "[Long Ringing Chord Outro]"
+    ],
+    [
+      "[Sparse Atmospheric Intro]",
+      "[Tremolo Picked Guitar Build]",
+      "[Heavy Tom Roll Crescendo]",
+      "[Massive Sludge Metal Groove]",
+      "[Emotional Release Climax]",
+      "[Feedback Fade Out]"
+    ],
+    [
+      "[Bass Guitar Chord Intro]",
+      "[Building Cymbal Swells]",
+      "[Sudden Wall of Sound]",
+      "[Slow Melodic Lead Over Heavy Rhythm]",
+      "[Epic Doomsday Finish]",
+      "[Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 1010101
+}
