@@ -1,7 +1,7 @@
 #!/usr/bin/env fish
 
 if test (count $argv) -lt 1
-    echo "Usage: ./batch_sheetsage.fish <batch_list.txt>"
+    echo "Usage: ./batch_sheetsage.fish <queue.csv>"
     exit 1
 end
 
@@ -21,7 +21,8 @@ cat $BATCH_FILE | while read -l line
         continue
     end
 
-    set args (string split "|" -- $line)
+    # Changed delimiter from "|" to "," to support CSV format
+    set args (string split "," -- $line)
     set YOUTUBE_URL (string trim -- $args[1])
     set SONG_NAME (string trim -- $args[2])
     set SUBFOLDER (string trim -- $args[3])
@@ -48,7 +49,7 @@ cat $BATCH_FILE | while read -l line
         -o "$SONG_NAME.%(ext)s" \
         "$YOUTUBE_URL"
 
-    # Add the expected file paths to the task list
+    # Add the expected file paths to the task list (keep | here as sheetsage parses it)
     set AUDIO_FILE "$DATASET_DIR/$SONG_NAME.mp3"
     echo "$AUDIO_FILE|$COVERS_DIR" >>$TASK_LIST
 end
