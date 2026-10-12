@@ -1,0 +1,29 @@
+{
+  "id": "symphonic_metal",
+  "choices": {
+    "bpm": [140, 150, 160, 170]
+  },
+  "style": "{bpm}, symphonic metal, heavy metal, epic orchestral, aggressive distorted electric guitars, massive brass, soaring choir, double bass drum blast beats, dramatic build-up, dark, heroic, cinematic, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Ominous Choir Intro]",
+      "[Heavy Guitar Riff Entry]",
+      "[Orchestral and Metal Fusion]",
+      "[Shredding Guitar Solo]",
+      "[Epic Brass Breakdown]",
+      "[Massive Wall of Sound Climax]",
+      "[Symphonic Outro]"
+    ],
+    [
+      "[Soft String Intro]",
+      "[Sudden Double Bass Drop]",
+      "[Chugging Riffs with Violin]",
+      "[Heroic Bridge]",
+      "[Tension Building Drums]",
+      "[Final Heavy Climax]",
+      "[Abrupt End]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 777666
+}

@@ -1,0 +1,29 @@
+{
+  "id": "psytrance_fullon",
+  "choices": {
+    "bpm": [140, 142, 145]
+  },
+  "style": "{bpm}, full-on psytrance, hypnotic rolling bassline, driving four on the floor kick, acid synthesizer squelches, ethereal pads, high energy, festival mainstage, psychedelic, relentless, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Ethereal Pad Intro]",
+      "[Pulsing Bassline Entry]",
+      "[Acid 303 Lead]",
+      "[Euphoric Breakdown]",
+      "[Massive Build-up]",
+      "[Explosive Trance Drop]",
+      "[Fade Out]"
+    ],
+    [
+      "[Tribal Percussion Intro]",
+      "[Galloping Bass Drop]",
+      "[Hypnotic Arpeggio]",
+      "[Atmospheric Bridge]",
+      "[Filter Sweep Build]",
+      "[Peak Time Climax]",
+      "[Sudden End]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 145145
+}

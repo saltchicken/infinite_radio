@@ -1,0 +1,29 @@
+{
+  "id": "neurofunk_dnb",
+  "choices": {
+    "bpm": [170, 172, 174, 175]
+  },
+  "style": "{bpm}, neurofunk drum and bass, dark step, aggressive Reese bass, fast complex breakbeats, heavy distortion, futuristic, cyberpunk aesthetic, high energy, underground club, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Dark Atmospheric Intro]",
+      "[Fast Hi-Hat Build]",
+      "[Heavy Modulated Bass Drop]",
+      "[Frenetic Drum Break]",
+      "[Tension Breakdown]",
+      "[Second Heavier Drop]",
+      "[Mechanical Fade Out]"
+    ],
+    [
+      "[Ominous Synth Intro]",
+      "[Snare Roll Build-up]",
+      "[Grinding Bassline Entry]",
+      "[Syncopated Groove]",
+      "[Distorted Synth Solo]",
+      "[Sudden Drop Cut]",
+      "[Echoing End]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 898989
+}
