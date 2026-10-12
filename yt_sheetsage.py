@@ -57,12 +57,31 @@ def main():
     parser.add_argument("-u", "--url", help="Single YouTube URL")
     parser.add_argument("-n", "--name", help="Single Song Name")
     parser.add_argument("-s", "--subfolder", default="", help="Subfolder to save the audio/scores in (optional)")
+    parser.add_argument("-o", "--output", default=".", help="Base output directory (default: current directory)")
     
     args = parser.parse_args()
     
     # 1. Gather all tasks
     tasks = []
     if args.batch:
+        batch_path = Path(args.batch)
+        filename_stem = batch_path.stem
+        
+        # Count the occurrences to catch unexpected multiple dashes
+        dash_count = filename_stem.count(" - ")
+        
+        if dash_count > 1:
+            print(f"Error: Unexpected filename format. Found multiple ' - ' in '{filename_stem}.csv'. Expected '<Spreadsheet> - <GameName>.csv'.")
+            sys.exit(1)
+        elif dash_count == 1:
+            # Split "<Spreadsheet> - <GameName>" based on Google Sheets download format
+            spreadsheet, game_name = filename_stem.split(" - ")
+            # Use Spreadsheet/GameName as the path
+            batch_subfolder = Path(spreadsheet.strip()) / game_name.strip()
+        else:
+            # Fallback to the whole file name if no dash is present
+            batch_subfolder = Path(filename_stem.strip())
+
         with open(args.batch, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
@@ -84,9 +103,10 @@ def main():
                         except ValueError:
                             print(f"⚠️ Warning: Could not parse duration '{parts[2]}' for '{name}'. Proceeding anyway.")
                             
-                    tasks.append({"url": url, "name": name, "subfolder": args.subfolder})
+                    tasks.append({"url": url, "name": name, "subfolder": batch_subfolder})
     elif args.url and args.name:
-        tasks.append({"url": args.url, "name": args.name, "subfolder": args.subfolder})
+        # Fallback to provided args.subfolder for single runs
+        tasks.append({"url": args.url, "name": args.name, "subfolder": Path(args.subfolder) if args.subfolder else None})
     else:
         print("Error: You must provide either a --batch CSV or both --url and --name.")
         sys.exit(1)
@@ -103,8 +123,9 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.eval().to(device)
     
-    # Consolidate output to the current working directory
-    base_dir = Path.cwd()
+    # Consolidate output to the base output directory
+    base_dir = Path(args.output).resolve()
+    base_dir.mkdir(parents=True, exist_ok=True)
     
     runs = [
         {"melody_only": True, "subfolder": "melody", "suffix": "-melody"},
