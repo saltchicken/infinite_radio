@@ -133,20 +133,28 @@ def main():
             track_log_details = []
             style_data = {}
             if "active_style" in controller_req and controller_req["active_style"]:
-                style_path = args.request.parent / controller_req["active_style"]
-                if style_path.is_dir():
-                    style_files = list(style_path.glob("*.json"))
-                    if style_files:
-                        chosen_style = smart_choice(style_files, style_history, max_memory=4)
-                        track_log_details.append(f"Style: {chosen_style.name}")
-                        style_data = json.loads(chosen_style.read_text(encoding="utf-8"))
+                active_styles = controller_req["active_style"]
+                if isinstance(active_styles, str):
+                    active_styles = [active_styles]
+
+                style_files = []
+                for style_req in active_styles:
+                    style_path = args.request.parent / style_req
+                    if style_path.is_dir():
+                        style_files.extend(style_path.rglob("*.json"))
+                    elif style_path.is_file():
+                        style_files.append(style_path)
                     else:
-                        main_logger.warning(f"No .json files found in style directory {style_path}.")
-                elif style_path.is_file():
-                    track_log_details.append(f"Style: {style_path.name}")
-                    style_data = json.loads(style_path.read_text(encoding="utf-8"))
+                        main_logger.warning(f"Style path not found: {style_path}")
+
+                if style_files:
+                    # Deduplicate in case overlapping directories were requested
+                    style_files = list(set(style_files))
+                    chosen_style = smart_choice(style_files, style_history, max_memory=4)
+                    track_log_details.append(f"Style: {chosen_style.parent.name}/{chosen_style.name}")
+                    style_data = json.loads(chosen_style.read_text(encoding="utf-8"))
                 else:
-                    main_logger.warning(f"Style path not found: {style_path}")
+                    main_logger.warning(f"No .json files found for active_style(s): {active_styles}")
 
             active_request = style_data.copy()
             active_request.update(controller_req)
@@ -214,24 +222,33 @@ def main():
                         active_request["style"] = active_request["style"].replace(f"{{{key}}}", chosen_val)
 
             if "abc" in active_request and active_request["abc"]:
-                abc_path = Path(active_request["abc"])
+                abc_reqs = active_request["abc"]
+                if isinstance(abc_reqs, str):
+                    abc_reqs = [abc_reqs]
+
+                abc_files = []
                 raw_abc = None
 
-                if abc_path.is_dir():
-                    abc_files = list(abc_path.rglob(f"*-{cot_mode}.abc")) if cot_mode in ["full", "melody"] else list(abc_path.rglob("*.abc"))
-                    if abc_files:
-                        chosen_abc = smart_choice(abc_files, abc_history, max_memory=15)
-                        track_log_details.append(f"Mode: '{cot_mode}' | Score: {chosen_abc.name}")
-                        raw_abc = chosen_abc.read_text(encoding="utf-8")
+                for abc_req in abc_reqs:
+                    abc_path = Path(abc_req)
+                    if abc_path.is_dir():
+                        if cot_mode in ["full", "melody"]:
+                            abc_files.extend(abc_path.rglob(f"*-{cot_mode}.abc"))
+                        else:
+                            abc_files.extend(abc_path.rglob("*.abc"))
+                    elif abc_path.is_file():
+                        abc_files.append(abc_path)
                     else:
-                        main_logger.warning(f"No .abc files found for cot '{cot_mode}' in directory {abc_path}. Reverting to standard generation.")
-                        active_request.pop("abc")
-                elif abc_path.is_file():
-                    track_log_details.append(f"Loading ABC sheet music from: {abc_path.name}")
-                    raw_abc = abc_path.read_text(encoding="utf-8")
+                        main_logger.warning(f"ABC path not found: {abc_path}")
+
+                if abc_files:
+                    abc_files = list(set(abc_files))
+                    chosen_abc = smart_choice(abc_files, abc_history, max_memory=15)
+                    track_log_details.append(f"Mode: '{cot_mode}' | Score: {chosen_abc.parent.name}/{chosen_abc.name}")
+                    raw_abc = chosen_abc.read_text(encoding="utf-8")
                 else:
-                    main_logger.warning(f"ABC path not found at {abc_path}. Reverting to standard generation.")
-                    active_request.pop("abc")
+                    main_logger.warning(f"No valid .abc files found for cot '{cot_mode}'. Reverting to standard generation.")
+                    active_request.pop("abc", None)
 
                 if raw_abc:
                     if inst_name is not None and midi_prog is not None:
