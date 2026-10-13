@@ -2,11 +2,6 @@ __pycache__
 *.egg-info
 
 outputs/
-cover-score/
-covers/
-newcovers/
-snes_cover/
-snes_playlist/
 
 *.abc
 *.lab
