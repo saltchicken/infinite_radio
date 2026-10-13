@@ -5,6 +5,8 @@ outputs/
 cover-score/
 covers/
 newcovers/
+snes_cover/
+snes_playlist/
 
 *.abc
 *.lab
