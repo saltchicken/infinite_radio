@@ -274,7 +274,7 @@ def main():
             with open(metadata_path, "w", encoding="utf-8") as f:
                 json.dump(metadata_to_save, f, indent=2)
 
-            combined_log = f"Generating Track {track_number} | " + " ".join(track_log_details)
+            combined_log = f"✅ Generating Track {track_number} | " + " ".join(track_log_details)
             main_logger.info(combined_log)
 
             start_time = time.time()
@@ -300,7 +300,7 @@ def main():
                 data = np.column_stack([data, data])
 
             play_queue.put((data, fs, current_output_dir))
-            main_logger.info(f"✅ Track {track_number} finished generating in {elapsed:.2f} seconds. Queued for next crossfade.")
+            main_logger.info(f"Track {track_number} finished generating in {elapsed:.2f} seconds. Queued for next crossfade.")
 
             track_history.append(current_output_dir)
             if len(track_history) > 10:

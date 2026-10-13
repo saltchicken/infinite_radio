@@ -1,7 +1,6 @@
 {
   "active_style": [
-    "styles/drum_and_bass/",
-    "styles/trance_and_psy/"
+    "styles/upvoted/"
   ],
   "volume": 0.4,
   "pause": false,
@@ -13,6 +12,6 @@
   "nar_lora": "loras/nar_lora_joint_v4.safetensors",
   "ar_scale": 0.5,
   "nar_scale": 1.0,
-  "abc": "covers/vgm/",
+  "abc": "newcovers/",
   "cot": "melody"
 }

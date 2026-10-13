@@ -4,6 +4,7 @@ __pycache__
 outputs/
 cover-score/
 covers/
+newcovers/
 
 *.abc
 *.lab

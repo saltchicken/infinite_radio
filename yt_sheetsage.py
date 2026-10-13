@@ -153,11 +153,22 @@ def main():
             run_dir.mkdir(parents=True, exist_ok=True)
             
             print(f"Generating (melody_only={run['melody_only']}) to '{run_dir}'...")
-            model.transcribe(
-                str(audio_path),
-                output_dir=str(run_dir),
-                melody_only=run['melody_only']
-            )
+            
+            try:
+                model.transcribe(
+                    str(audio_path),
+                    output_dir=str(run_dir),
+                    melody_only=run['melody_only']
+                )
+            except RuntimeError as e:
+                if "cannot be represented on the decoded subbeat grid" in str(e):
+                    print(f"⚠️ Skipping transcription: SheetSage couldn't quantize the timing for sheet music. Error: {e}")
+                    continue  # Skip to the next run or track without attempting to rename files
+                else:
+                    raise e
+            except Exception as e:
+                print(f"❌ An unexpected error occurred during transcription: {e}")
+                continue  # Skip to the next run or track without attempting to rename files
             
             default_output = run_dir / "score.abc"
             final_output = run_dir / f"{audio_path.stem}{run['suffix']}.abc"
