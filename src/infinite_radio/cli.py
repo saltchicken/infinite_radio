@@ -64,7 +64,6 @@ def main():
     parser = argparse.ArgumentParser(description="Infinite Radio Client")
     parser.add_argument(
         "--state-file",
-        "--request",
         dest="state_file",
         type=Path,
         default=Path.cwd() / "controller.json",
