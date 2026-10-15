@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 api_logger = logging.getLogger("RemoteAPI")
 
+
 class ConfigUpdatePayload(BaseModel):
     settings: Dict[str, Any]
 
@@ -35,6 +36,66 @@ def _persist_state(state_file: Path, shared_state: dict):
         api_logger.warning(f"Failed to persist state to {state_file.name}: {e}")
 
 
+def _discover_styles(base_path: Path) -> Dict[str, list[str]]:
+    """Scans styles/ for both directories containing JSONs and individual .json files."""
+    styles_dir = base_path / "styles"
+    folders = set()
+    files = []
+
+    if styles_dir.is_dir():
+        for json_file in styles_dir.rglob("*.json"):
+            rel_file = json_file.relative_to(base_path).as_posix()
+            files.append(rel_file)
+
+            # Add parent directories up to 'styles/' so users can select whole categories
+            parent = json_file.parent
+            while parent != base_path and parent.is_relative_to(styles_dir):
+                folders.add(parent.relative_to(base_path).as_posix() + "/")
+                parent = parent.parent
+
+    return {
+        "folders": sorted(folders),
+        "files": sorted(files),
+    }
+
+
+def _discover_abc(base_path: Path, abc_base_dir_str: str | None) -> Dict[str, list[str]]:
+    """
+    Scans abc_base_dir (e.g., sheetsage/output) for ABC directories and files.
+    Collapses SheetSage's '<song>-score/melody' and '<song>-score/full' folders
+    so the user sees clean soundtrack/game folders and song score folders.
+    """
+    if abc_base_dir_str:
+        abc_root = Path(abc_base_dir_str)
+        if not abc_root.is_absolute():
+            abc_root = base_path / abc_root
+    else:
+        abc_root = base_path / "sheetsage" / "output"
+
+    folders = set()
+    song_folders = set()
+
+    if abc_root.is_dir():
+        for abc_file in abc_root.rglob("*.abc"):
+            parent = abc_file.parent
+            # SheetSage structure: <collection>/<game>/<song>-score/{melody,full}/<song>.abc
+            if parent.name in ("melody", "full") and parent.parent != abc_root:
+                score_dir = parent.parent
+                song_folders.add(score_dir.relative_to(abc_root).as_posix() + "/")
+                curr = score_dir.parent
+            else:
+                curr = parent
+
+            while curr != abc_root and curr.is_relative_to(abc_root):
+                folders.add(curr.relative_to(abc_root).as_posix() + "/")
+                curr = curr.parent
+
+    return {
+        "collections": sorted(folders),
+        "songs": sorted(song_folders),
+    }
+
+
 def create_remote_api(
     shared_state: dict,
     play_queue: queue.Queue,
@@ -57,14 +118,25 @@ def create_remote_api(
 
     @app.get("/api/options")
     def get_options():
-        """Auto-discovers available LoRA files in loras/ to populate Web UI dropdowns."""
+        """Auto-discovers available LoRAs, style folders/files, and ABC directories for the Web UI."""
         lora_dir = base_path / "loras"
         loras = []
         if lora_dir.is_dir():
             loras = sorted(
-                str(p.relative_to(base_path)) for p in lora_dir.rglob("*.safetensors")
+                p.relative_to(base_path).as_posix() for p in lora_dir.rglob("*.safetensors")
             )
-        return {"loras": loras}
+
+        with config_lock:
+            abc_base_dir_str = shared_state.get("abc_base_dir", "sheetsage/output")
+
+        styles_info = _discover_styles(base_path)
+        abc_info = _discover_abc(base_path, abc_base_dir_str)
+
+        return {
+            "loras": loras,
+            "styles": styles_info,
+            "abc": abc_info,
+        }
 
     @app.get("/api/config")
     def get_config():
@@ -203,15 +275,15 @@ def create_remote_api(
         try:
             meta_data = json.loads(meta_path.read_text(encoding="utf-8"))
             votes_file = base_path / "votes.jsonl"
-            
+
             feature_val = meta_data.get("_source_style") if feature == "style" else meta_data.get("_source_abc")
-            
+
             vote_record = {
                 "timestamp": datetime.now().isoformat(),
                 "vote": vote_type,
                 "feature": feature,
                 "value": feature_val,
-                "track": curr_dir.name
+                "track": curr_dir.name,
             }
 
             if feature == "style" and meta_data.get("lyrics"):
@@ -219,11 +291,11 @@ def create_remote_api(
 
             with open(votes_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps(vote_record) + "\n")
-            
+
             icon = "⭐" if vote_type == "up" else "👎"
             api_logger.info(f"{icon} {vote_type.title()}voted {feature}! Saved to {votes_file.name}")
             return {"status": "success", "record": vote_record}
-            
+
         except Exception as e:
             api_logger.error(f"❌ Failed to process vote: {e}")
             raise HTTPException(status_code=500, detail="Vote failed")
