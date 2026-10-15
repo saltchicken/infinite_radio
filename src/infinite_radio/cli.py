@@ -38,6 +38,7 @@ DEFAULT_STATE = {
     "nar_scale": 1.0,
     "abc": "",
     "cot": "melody",
+    "abc_base_dir": "sheetsage/output",
 }
 
 
@@ -74,6 +75,11 @@ def main():
     parser.add_argument("--api-url", default="http://127.0.0.1:8000", help="Base URL of the YuE2 API Server")
     parser.add_argument("--ar-lora", type=str, help="Fallback path to the AR LoRA safetensors file on server")
     parser.add_argument("--nar-lora", type=str, help="Fallback path to the NAR LoRA safetensors file on server")
+    
+    # New secure UI routing arguments
+    parser.add_argument("--ui-host", default="127.0.0.1", help="Host address for the local Web UI")
+    parser.add_argument("--ui-port", type=int, default=8001, help="Port for the local Web UI")
+    
     args = parser.parse_args()
 
     api_url = args.api_url.rstrip("/")
@@ -110,10 +116,11 @@ def main():
         base_path=base_dir,
         state_file=state_file,
     )
+    
     api_thread = threading.Thread(
         target=uvicorn.run,
         args=(remote_app,),
-        kwargs={"host": "0.0.0.0", "port": 8001, "log_level": "warning", "use_colors": True},
+        kwargs={"host": args.ui_host, "port": args.ui_port, "log_level": "warning", "use_colors": True},
         daemon=True
     )
 
@@ -123,7 +130,7 @@ def main():
     main_logger.info("==============================================")
     main_logger.info("📻 Infinite Radio Local Playback Started")
     main_logger.info(f"🌐 Connected to YuE2 API at {api_url}")
-    main_logger.info(f"📱 Web Control & Config UI: http://0.0.0.0:8001")
+    main_logger.info(f"📱 Web Control & Config UI: http://{args.ui_host}:{args.ui_port}")
     main_logger.info("==============================================")
 
     track_number = 1
@@ -191,6 +198,9 @@ def main():
             inst_name = active_request.pop("abc_instrument", None)
             midi_prog = active_request.pop("abc_midi_program", None)
 
+            # Extract the base directory for ABC files
+            abc_base_dir = active_request.pop("abc_base_dir", None)
+
             # Cleaned up ephemeral keys from pop target list
             for key in ["pause", "volume", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora"]:
                 active_request.pop(key, None)
@@ -215,7 +225,15 @@ def main():
                 raw_abc = None
 
                 for abc_req in abc_reqs:
-                    abc_path = Path(abc_req) if Path(abc_req).is_absolute() else (base_dir / abc_req)
+                    req_path = Path(abc_req)
+                    if req_path.is_absolute():
+                        abc_path = req_path
+                    elif abc_base_dir:
+                        base_abc = Path(abc_base_dir)
+                        abc_path = (base_abc / req_path) if base_abc.is_absolute() else (base_dir / base_abc / req_path)
+                    else:
+                        abc_path = base_dir / req_path
+
                     if abc_path.is_dir():
                         if cot_mode in ["full", "melody"]:
                             abc_files.extend(abc_path.rglob(f"*-{cot_mode}.abc"))

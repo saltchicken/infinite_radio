@@ -8,6 +8,7 @@ import logging
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager, redirect_stdout, redirect_stderr
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -31,35 +32,26 @@ server_logger = logging.getLogger("YuE2Server")
 TASK_TTL_SECONDS = 1800
 
 
-class ThreadSafeStreamFilter:
-    """Filter to intercept and drop noisy logs containing [YuE2] safely across multiple threads."""
-    def __init__(self, stream, target="[YuE2]"):
-        self.stream = stream
+class FilteredStream(io.StringIO):
+    """Safely intercepts standard streams locally to filter out noisy strings."""
+    def __init__(self, original_stream, target="[YuE2]"):
+        super().__init__()
+        self.original_stream = original_stream
         self.target = target
-        self.local = threading.local()
 
-    def write(self, data):
-        if not hasattr(self.local, "buf"):
-            self.local.buf = ""
+    def write(self, s):
+        if self.target not in s:
+            self.original_stream.write(s)
+        return len(s)
 
-        self.local.buf += data
-        while True:
-            if "\n" in self.local.buf:
-                splitter = "\n"
-            elif "\r" in self.local.buf:
-                splitter = "\r"
-            else:
-                break
-            line, self.local.buf = self.local.buf.split(splitter, 1)
-            if self.target not in line:
-                self.stream.write(line + splitter)
-                self.stream.flush()
 
-    def flush(self):
-        self.stream.flush()
-
-    def __getattr__(self, attr):
-        return getattr(self.stream, attr)
+@contextmanager
+def suppress_noisy_logs(target="[YuE2]"):
+    """Context manager to suppress specific strings from third-party libraries locally."""
+    filtered_out = FilteredStream(sys.stdout, target)
+    filtered_err = FilteredStream(sys.stderr, target)
+    with redirect_stdout(filtered_out), redirect_stderr(filtered_err):
+        yield
 
 
 class GenerateRequest(BaseModel):
@@ -229,7 +221,9 @@ class ModelManager:
     def generate_artifacts_zip(self, req: GenerateRequest) -> bytes:
         with self.lock:
             self.ensure_model_loaded(req.ar_lora, req.nar_lora, req.ar_scale, req.nar_scale)
-            song = self.pipe(**req.yue_kwargs)
+            
+            with suppress_noisy_logs("[YuE2]"):
+                song = self.pipe(**req.yue_kwargs)
 
             # Save artifacts to a temporary directory and bundle into an in-memory ZIP
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -348,10 +342,6 @@ def main():
     parser.add_argument("--nar-lora", type=Path, help="Default path to the NAR LoRA safetensors file")
     parser.add_argument("--preload", action="store_true", help="Preload the base model on startup before first request")
     args = parser.parse_args()
-
-    # Install stream filters once globally to suppress noisy [YuE2] progress bars
-    sys.stdout = ThreadSafeStreamFilter(sys.stdout)
-    sys.stderr = ThreadSafeStreamFilter(sys.stderr)
 
     manager = ModelManager(
         model_name=args.model,
