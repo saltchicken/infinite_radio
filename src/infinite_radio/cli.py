@@ -1,5 +1,5 @@
-import sys
-import torch
+import io
+import zipfile
 import argparse
 import json
 import random
@@ -7,69 +7,38 @@ import threading
 import queue
 import time
 import shutil
-import numpy as np
-import soundfile as sf
 import logging
 from pathlib import Path
-from yue2 import YuE2Pipeline
+
+import requests
+import numpy as np
+import soundfile as sf
 
 from .utils.abc_utils import force_instrumental_abc
-from .utils.lora_utils import load_ckpt, merge_lora
 from .utils.shuffle_utils import smart_choice
 from .watcher import load_controller_config, config_watcher
 from .player import audio_player
 
 # --- Logging Configuration ---
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-                    datefmt="%H:%M:%S")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S"
+)
 main_logger = logging.getLogger("Main")
-sys_logger = logging.getLogger("System")
-
-
-class StreamFilter:
-    """Filter to intercept and drop logs containing [YuE2]"""
-    def __init__(self, stream, target="[YuE2]"):
-        self.stream = stream
-        self.target = target
-        self.buf = ""
-
-    def write(self, data):
-        self.buf += data
-        
-        # Process both newlines and carriage returns
-        while True:
-            if "\n" in self.buf:
-                splitter = "\n"
-            elif "\r" in self.buf:
-                splitter = "\r"
-            else:
-                break
-                
-            line, self.buf = self.buf.split(splitter, 1)
-            
-            if self.target not in line:
-                self.stream.write(line + splitter)
-                self.stream.flush() # Force terminal to render the update
-
-    def flush(self):
-        self.stream.flush()
-
-    def __getattr__(self, attr):
-        return getattr(self.stream, attr)
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Infinite Radio Client")
     parser.add_argument("--request", type=Path, default=Path.cwd() / "controller.json")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--crossfade", type=float, default=6.0)
-    parser.add_argument("--model", default="m-a-p/YuE2-3B")
-    parser.add_argument("--vae", default="m-a-p/YuE2-Vae")
-    parser.add_argument("--ar-lora", type=Path, help="Path to the AR LoRA safetensors file")
-    parser.add_argument("--nar-lora", type=Path, help="Path to the NAR LoRA safetensors file")
+    parser.add_argument("--api-url", default="http://127.0.0.1:8000", help="Base URL of the YuE2 API Server")
+    parser.add_argument("--ar-lora", type=str, help="Fallback path to the AR LoRA safetensors file on server")
+    parser.add_argument("--nar-lora", type=str, help="Fallback path to the NAR LoRA safetensors file on server")
     args = parser.parse_args()
 
+    api_url = args.api_url.rstrip("/")
     args.output.mkdir(parents=True, exist_ok=True)
 
     shared_state = {}
@@ -91,24 +60,22 @@ def main():
     watcher_thread = threading.Thread(
         target=config_watcher,
         args=(args.request, shared_state, pause_event, skip_event, shutdown_event, config_lock, playback_info),
-        daemon=True)
+        daemon=True
+    )
     player_thread = threading.Thread(
         target=audio_player,
         args=(play_queue, shared_state, config_lock, pause_event, skip_event, shutdown_event, playback_info, args.crossfade),
-        daemon=True)
+        daemon=True
+    )
 
     watcher_thread.start()
     player_thread.start()
 
     main_logger.info("==============================================")
     main_logger.info("📻 Infinite Radio Local Playback Started")
+    main_logger.info(f"🌐 Connected to YuE2 API at {api_url}")
     main_logger.info("==============================================")
 
-    pipe = None
-    current_ar_scale = None
-    current_nar_scale = None
-    current_ar_lora = None
-    current_nar_lora = None
     track_number = 1
     track_history = []
     style_history = []
@@ -151,7 +118,6 @@ def main():
                         main_logger.warning(f"Style path not found: {style_path}")
 
                 if style_files:
-                    # Deduplicate in case overlapping directories were requested
                     style_files = list(set(style_files))
                     chosen_style = smart_choice(style_files, style_history, max_memory=4)
                     chosen_style_path = str(chosen_style)
@@ -163,47 +129,11 @@ def main():
             active_request = style_data.copy()
             active_request.update(controller_req)
 
+            # Extract LoRA settings for the API wrapper
             requested_ar_scale = float(active_request.get("ar_scale", 1.0))
             requested_nar_scale = float(active_request.get("nar_scale", 1.0))
-
-            req_ar_lora_str = active_request.get("ar_lora", "")
-            req_nar_lora_str = active_request.get("nar_lora", "")
-
-            requested_ar_lora = Path(req_ar_lora_str) if req_ar_lora_str else args.ar_lora
-            requested_nar_lora = Path(req_nar_lora_str) if req_nar_lora_str else args.nar_lora
-
-            if (pipe is None or current_ar_scale != requested_ar_scale or
-                    current_nar_scale != requested_nar_scale or
-                    current_ar_lora != requested_ar_lora or
-                    current_nar_lora != requested_nar_lora):
-
-                if pipe is not None:
-                    sys_logger.info("🔄 LoRA configuration change detected. Reloading model...")
-                    del pipe
-                    torch.cuda.empty_cache()
-                else:
-                    main_logger.info("Loading YuE2 Model into VRAM...")
-
-                pipe = YuE2Pipeline.from_pretrained(args.model, vae=args.vae, device="cuda")
-                top_model = pipe._load_model()
-                bb = top_model.model
-
-                if requested_ar_lora and requested_ar_lora.exists():
-                    main_logger.info(f"Loading AR LoRA from {requested_ar_lora.name}...")
-                    ar_data = load_ckpt(str(requested_ar_lora), "cuda")
-                    n_merged = merge_lora(bb, "self_attn", "mlp", ar_data["lora"], scale=requested_ar_scale, dev="cuda")
-                    main_logger.info(f"Merged {n_merged} AR LoRA linear layers (scale: {requested_ar_scale}).")
-
-                if requested_nar_lora and requested_nar_lora.exists():
-                    main_logger.info(f"Loading NAR LoRA from {requested_nar_lora.name}...")
-                    nar_data = load_ckpt(str(requested_nar_lora), "cuda")
-                    n_merged = merge_lora(bb, "nar_self_attn", "nar_mlp", nar_data["lora"], scale=requested_nar_scale, dev="cuda")
-                    top_model.vae2llm.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["vae2llm"].items()})
-                    top_model.llm2vae.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["llm2vae"].items()})
-                    main_logger.info(f"Merged {n_merged} NAR LoRA linear layers (scale: {requested_nar_scale}) & injected custom VAE/LLM crossovers.")
-
-                current_ar_scale, current_nar_scale = requested_ar_scale, requested_nar_scale
-                current_ar_lora, current_nar_lora = requested_ar_lora, requested_nar_lora
+            requested_ar_lora = active_request.get("ar_lora") or args.ar_lora
+            requested_nar_lora = active_request.get("nar_lora") or args.nar_lora
 
             active_request["seed"] = random.randint(0, 2**32 - 1)
             cot_mode = active_request.get("cot", "full")
@@ -265,7 +195,7 @@ def main():
             current_output_dir = args.output / f"track_{track_number:03d}"
             current_output_dir.mkdir(exist_ok=True)
 
-            # Create a separate dictionary to save metadata so we don't pollute the YuE2 kwargs
+            # Save metadata locally
             metadata_to_save = active_request.copy()
             metadata_to_save["_source_style"] = chosen_style_path
             metadata_to_save["_source_abc"] = chosen_abc_path
@@ -274,26 +204,36 @@ def main():
             with open(metadata_path, "w", encoding="utf-8") as f:
                 json.dump(metadata_to_save, f, indent=2)
 
-            combined_log = f"✅ Generating Track {track_number} | " + " ".join(track_log_details)
+            combined_log = f"✅ Requesting Track {track_number} | " + " ".join(track_log_details)
             main_logger.info(combined_log)
 
-            start_time = time.time()
-            original_stdout, original_stderr = sys.stdout, sys.stderr
-            sys.stdout = StreamFilter(sys.stdout)
-            sys.stderr = StreamFilter(sys.stderr)
+            api_payload = {
+                "ar_lora": str(requested_ar_lora) if requested_ar_lora else None,
+                "nar_lora": str(requested_nar_lora) if requested_nar_lora else None,
+                "ar_scale": requested_ar_scale,
+                "nar_scale": requested_nar_scale,
+                "yue_kwargs": active_request,
+            }
 
+            start_time = time.time()
             try:
-                song = pipe(**active_request)
-            finally:
-                if getattr(sys.stdout, 'buf', None) and "[YuE2]" not in sys.stdout.buf:
-                    original_stdout.write(sys.stdout.buf)
-                if getattr(sys.stderr, 'buf', None) and "[YuE2]" not in sys.stderr.buf:
-                    original_stderr.write(sys.stderr.buf)
-                sys.stdout, sys.stderr = original_stdout, original_stderr
+                response = requests.post(f"{api_url}/generate", json=api_payload, timeout=600)
+                response.raise_for_status()
+            except requests.RequestException as e:
+                main_logger.error(f"API request failed: {e}. Retrying in 5 seconds...")
+                shutdown_event.wait(5.0)
+                continue
 
             elapsed = time.time() - start_time
-            song.save_artifacts(current_output_dir)
+
+            # Extract returned artifacts into current_output_dir
+            with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
+                zf.extractall(current_output_dir)
+
             audio_path = current_output_dir / "audio.flac"
+            if not audio_path.exists():
+                main_logger.error(f"Server response did not contain audio.flac in {current_output_dir}")
+                continue
 
             data, fs = sf.read(audio_path, dtype="float32")
             if data.ndim == 1:
@@ -320,9 +260,6 @@ def main():
     finally:
         shutdown_event.set()
         pause_event.clear()
-        if 'pipe' in locals() and pipe is not None:
-            del pipe
-        torch.cuda.empty_cache()
 
         main_logger.info("Waiting for background processes to exit...")
         watcher_thread.join(timeout=3)

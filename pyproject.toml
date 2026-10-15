@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "infinite-radio"
-version = "0.1.0"
+version = "0.2.0"
 description = "An infinite AI music generation radio using YuE2"
 requires-python = ">=3.10"
 dependencies = [
@@ -20,8 +20,13 @@ dependencies = [
     "yue2-infer @ git+https://github.com/multimodal-art-projection/YuE.git",
     "torch",
     "torchaudio",
-    "pyyaml"
+    "pyyaml",
+    "fastapi",
+    "uvicorn",
+    "requests",
+    "pydantic"
 ]
 
 [project.scripts]
 infinite-radio = "infinite_radio.cli:main"
+infinite-radio-server = "infinite_radio.server:main"
