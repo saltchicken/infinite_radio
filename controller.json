@@ -1,14 +1,16 @@
 {
-  "abc_base_dir": "sheetsage/output",
   "active_style": [
-    "styles/upvoted/"
+    "styles/upvoted/house_and_techno/fisher_house.json"
   ],
-  "abc": "vgm/snes/mega_man_x/",
+  "abc_base_dir": "sheetsage/output",
+  "abc": [
+    "vgm/snes/mystic_quest/"
+  ],
   "cot": "melody",
   "ar_lora": "loras/ar_lora_inst_v3abc.safetensors",
   "nar_lora": "loras/nar_lora_joint_v4.safetensors",
   "ar_scale": 0.5,
-  "nar_scale": 1,
+  "nar_scale": 1.0,
   "volume": 0.4,
-  "pause": true
+  "pause": false
 }

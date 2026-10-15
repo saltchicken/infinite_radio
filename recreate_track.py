@@ -27,6 +27,7 @@ def main():
         metadata.pop(key, None)
 
     # Format the payload for the server
+    # Note: Using your controller.json defaults for the required LoRA bindings
     payload = {
         "ar_lora": "loras/ar_lora_inst_v3abc.safetensors",
         "nar_lora": "loras/nar_lora_joint_v4.safetensors",

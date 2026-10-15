@@ -120,7 +120,7 @@ def main():
     api_thread = threading.Thread(
         target=uvicorn.run,
         args=(remote_app,),
-        kwargs={"host": args.ui_host, "port": args.ui_port, "log_level": "warning", "use_colors": True},
+        kwargs={"host": args.ui_host, "port": args.ui_port, "log_config": None},
         daemon=True
     )
 
@@ -192,7 +192,7 @@ def main():
             requested_ar_lora = active_request.get("ar_lora") or args.ar_lora
             requested_nar_lora = active_request.get("nar_lora") or args.nar_lora
 
-            active_request["seed"] = random.randint(0, 2**32 - 1)
+            active_request["seed"] = active_request.get("seed", random.randint(0, 2**32 - 1))
             cot_mode = active_request.get("cot", "full")
 
             inst_name = active_request.pop("abc_instrument", None)
@@ -202,7 +202,7 @@ def main():
             abc_base_dir = active_request.pop("abc_base_dir", None)
 
             # Cleaned up ephemeral keys from pop target list
-            for key in ["pause", "volume", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora"]:
+            for key in ["pause", "volume", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora", "id", "_source_style", "_source_abc"]:
                 active_request.pop(key, None)
 
             if isinstance(active_request.get("lyrics"), list):
