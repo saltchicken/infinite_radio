@@ -13,11 +13,13 @@ from pathlib import Path
 import requests
 import numpy as np
 import soundfile as sf
+import uvicorn
 
 from .utils.abc_utils import force_instrumental_abc
 from .utils.shuffle_utils import smart_choice
 from .watcher import load_controller_config, config_watcher
 from .player import audio_player
+from .remote_api import create_remote_api
 
 # --- Logging Configuration ---
 logging.basicConfig(
@@ -68,12 +70,22 @@ def main():
         daemon=True
     )
 
+    remote_app = create_remote_api(shared_state, pause_event, skip_event, config_lock, playback_info, args.request.parent)
+    api_thread = threading.Thread(
+        target=uvicorn.run,
+        args=(remote_app,),
+        kwargs={"host": "0.0.0.0", "port": 8001, "log_level": "warning", "use_colors": True},
+        daemon=True
+    )
+
+    api_thread.start()
     watcher_thread.start()
     player_thread.start()
 
     main_logger.info("==============================================")
     main_logger.info("📻 Infinite Radio Local Playback Started")
     main_logger.info(f"🌐 Connected to YuE2 API at {api_url}")
+    main_logger.info(f"📱 Remote Control API listening on http://0.0.0.0:8001")
     main_logger.info("==============================================")
 
     track_number = 1
@@ -141,7 +153,8 @@ def main():
             inst_name = active_request.pop("abc_instrument", None)
             midi_prog = active_request.pop("abc_midi_program", None)
 
-            for key in ["pause", "skip", "volume", "save", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora", "vote_style", "vote_abc"]:
+            # Cleaned up ephemeral keys from pop target list
+            for key in ["pause", "volume", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora"]:
                 active_request.pop(key, None)
 
             if isinstance(active_request.get("lyrics"), list):

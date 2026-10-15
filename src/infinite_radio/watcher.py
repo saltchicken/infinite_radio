@@ -1,10 +1,7 @@
-# src/infinite_radio/watcher.py
 import json
 import time
-import shutil
 import logging
 from pathlib import Path
-from datetime import datetime
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -16,10 +13,6 @@ def load_controller_config(request_path):
     playback_defaults = {
         "volume": 0.3,
         "pause": False,
-        "skip": False,
-        "save": False,
-        "vote_style": "",
-        "vote_abc": "",
         "ar_scale": 1.0,
         "nar_scale": 1.0
     }
@@ -33,7 +26,7 @@ class ConfigHandler(FileSystemEventHandler):
         self.request_path = request_path.resolve()
         self.shared_state = shared_state
         self.pause_event = pause_event
-        self.skip_event = skip_event
+        self.skip_event = skip_event  # Kept in signature for threading compatibility
         self.config_lock = config_lock
         self.playback_info = playback_info
 
@@ -66,94 +59,7 @@ class ConfigHandler(FileSystemEventHandler):
                 self.shared_state.clear()
                 self.shared_state.update(controller_data)
 
-            config_changed = False
-
-            if controller_data.get("skip", False):
-                self.skip_event.set()
-                controller_data["skip"] = False
-                config_changed = True
-
-            # --- START VOTING LOGIC ---
-            votes_to_process = []
-            for feature in ["style", "abc"]:
-                vote_val = str(controller_data.get(f"vote_{feature}", "")).strip().lower()
-                
-                if vote_val in ["up", "down"]:
-                    votes_to_process.append((feature, vote_val))
-                    controller_data[f"vote_{feature}"] = ""
-                    config_changed = True
-
-            if votes_to_process:
-                curr_dir = self.playback_info.get("current_dir")
-                if curr_dir and curr_dir.exists():
-                    meta_path = curr_dir / "metadata.json"
-                    if meta_path.exists():
-                        try:
-                            meta_data = json.loads(meta_path.read_text(encoding="utf-8"))
-                            votes_file = self.request_path.parent / "votes.jsonl"
-                            
-                            with open(votes_file, "a", encoding="utf-8") as f:
-                                for feature, vote_type in votes_to_process:
-                                    
-                                    if feature == "style":
-                                        feature_val = meta_data.get("_source_style")
-                                    else:
-                                        feature_val = meta_data.get("_source_abc")
-                                        
-                                    vote_record = {
-                                        "timestamp": datetime.now().isoformat(),
-                                        "vote": vote_type,
-                                        "feature": feature,
-                                        "value": feature_val,
-                                        "track": curr_dir.name
-                                    }
-
-                                    # Include lyrics in the same record if voting on a style
-                                    if feature == "style" and meta_data.get("lyrics"):
-                                        vote_record["lyrics"] = meta_data.get("lyrics")
-
-                                    f.write(json.dumps(vote_record) + "\n")
-                                    
-                                    icon = "⭐" if vote_type == "up" else "👎"
-                                    sys_logger.info(f"{icon} {vote_type.title()}voted {feature}! Saved to {votes_file.name}")
-                                        
-                        except Exception as e:
-                            sys_logger.error(f"❌ Failed to process votes: {e}")
-                    else:
-                        sys_logger.warning("⚠️ No metadata.json found for the current track to vote on.")
-                else:
-                    sys_logger.warning("⚠️ No track currently playing to vote on.")
-            # --- END VOTING LOGIC ---
-
-            if controller_data.get("save", False):
-                controller_data["save"] = False
-                config_changed = True
-
-                curr_dir = self.playback_info.get("current_dir")
-                if curr_dir and curr_dir.exists():
-                    save_base = curr_dir.parent / "saved"
-                    save_base.mkdir(exist_ok=True)
-
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    save_dest = save_base / f"{curr_dir.name}_{timestamp}"
-
-                    counter = 1
-                    while save_dest.exists():
-                        save_dest = save_base / f"{curr_dir.name}_{timestamp}_{counter}"
-                        counter += 1
-
-                    try:
-                        shutil.copytree(curr_dir, save_dest)
-                        sys_logger.info(f"💾 Saved currently playing track to: {save_dest}")
-                    except Exception as e:
-                        sys_logger.error(f"❌ Failed to save track: {e}")
-                else:
-                    sys_logger.warning("⚠️ No track currently playing to save.")
-
-            if config_changed:
-                with open(self.request_path, "w", encoding="utf-8") as f:
-                    json.dump(controller_data, f, indent=2)
-
+            # Handle pause state directly from the updated shared_state
             if self.shared_state.get("pause", False):
                 self.pause_event.set()
             else:
