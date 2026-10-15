@@ -17,7 +17,6 @@ import uvicorn
 
 from .utils.abc_utils import force_instrumental_abc
 from .utils.shuffle_utils import smart_choice
-from .watcher import load_controller_config, config_watcher
 from .player import audio_player
 from .remote_api import create_remote_api
 
@@ -29,10 +28,47 @@ logging.basicConfig(
 )
 main_logger = logging.getLogger("Main")
 
+DEFAULT_STATE = {
+    "volume": 0.4,
+    "pause": False,
+    "active_style": ["styles/upvoted/"],
+    "ar_lora": "loras/ar_lora_inst_v3abc.safetensors",
+    "nar_lora": "loras/nar_lora_joint_v4.safetensors",
+    "ar_scale": 0.5,
+    "nar_scale": 1.0,
+    "abc": "",
+    "cot": "melody",
+}
+
+
+def load_initial_state(state_path: Path) -> dict:
+    state = DEFAULT_STATE.copy()
+    if state_path.exists():
+        try:
+            saved = json.loads(state_path.read_text(encoding="utf-8"))
+            state.update(saved)
+            main_logger.info(f"Loaded saved state from {state_path.name}")
+        except Exception as e:
+            main_logger.warning(f"Could not parse {state_path.name} ({e}). Using defaults.")
+    else:
+        try:
+            state_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+            main_logger.info(f"Created initial state file at {state_path.name}")
+        except Exception as e:
+            main_logger.warning(f"Could not write initial state file: {e}")
+    return state
+
 
 def main():
     parser = argparse.ArgumentParser(description="Infinite Radio Client")
-    parser.add_argument("--request", type=Path, default=Path.cwd() / "controller.json")
+    parser.add_argument(
+        "--state-file",
+        "--request",
+        dest="state_file",
+        type=Path,
+        default=Path.cwd() / "controller.json",
+        help="Path to persist Web UI settings across restarts",
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--crossfade", type=float, default=6.0)
     parser.add_argument("--api-url", default="http://127.0.0.1:8000", help="Base URL of the YuE2 API Server")
@@ -42,16 +78,15 @@ def main():
 
     api_url = args.api_url.rstrip("/")
     args.output.mkdir(parents=True, exist_ok=True)
+    state_file = args.state_file.resolve()
+    base_dir = state_file.parent
 
-    shared_state = {"volume": 0.4, "pause": False}
-    try:
-        initial_data = load_controller_config(args.request)
-        shared_state.update(initial_data)
-    except Exception as e:
-        main_logger.error(f"Error loading initial config: {e}. Ensure controller.json exists.")
-        return
+    shared_state = load_initial_state(state_file)
 
     pause_event = threading.Event()
+    if shared_state.get("pause", False):
+        pause_event.set()
+
     skip_event = threading.Event()
     shutdown_event = threading.Event()
     config_lock = threading.Lock()
@@ -59,18 +94,21 @@ def main():
 
     playback_info = {"current_dir": None}
 
-    watcher_thread = threading.Thread(
-        target=config_watcher,
-        args=(args.request, shared_state, shutdown_event, config_lock),
-        daemon=True
-    )
     player_thread = threading.Thread(
         target=audio_player,
         args=(play_queue, shared_state, config_lock, pause_event, skip_event, shutdown_event, playback_info, args.crossfade),
         daemon=True
     )
 
-    remote_app = create_remote_api(shared_state, pause_event, skip_event, config_lock, playback_info, args.request.parent)
+    remote_app = create_remote_api(
+        shared_state=shared_state,
+        pause_event=pause_event,
+        skip_event=skip_event,
+        config_lock=config_lock,
+        playback_info=playback_info,
+        base_path=base_dir,
+        state_file=state_file,
+    )
     api_thread = threading.Thread(
         target=uvicorn.run,
         args=(remote_app,),
@@ -79,13 +117,12 @@ def main():
     )
 
     api_thread.start()
-    watcher_thread.start()
     player_thread.start()
 
     main_logger.info("==============================================")
     main_logger.info("📻 Infinite Radio Local Playback Started")
     main_logger.info(f"🌐 Connected to YuE2 API at {api_url}")
-    main_logger.info(f"📱 Remote Control API listening on http://0.0.0.0:8001")
+    main_logger.info(f"📱 Web Control & Config UI: http://0.0.0.0:8001")
     main_logger.info("==============================================")
 
     track_number = 1
@@ -117,11 +154,11 @@ def main():
             if "active_style" in controller_req and controller_req["active_style"]:
                 active_styles = controller_req["active_style"]
                 if isinstance(active_styles, str):
-                    active_styles = [active_styles]
+                    active_styles = [s.strip() for s in active_styles.split(",") if s.strip()]
 
                 style_files = []
                 for style_req in active_styles:
-                    style_path = args.request.parent / style_req
+                    style_path = (base_dir / style_req) if not Path(style_req).is_absolute() else Path(style_req)
                     if style_path.is_dir():
                         style_files.extend(style_path.rglob("*.json"))
                     elif style_path.is_file():
@@ -171,13 +208,13 @@ def main():
             if "abc" in active_request and active_request["abc"]:
                 abc_reqs = active_request["abc"]
                 if isinstance(abc_reqs, str):
-                    abc_reqs = [abc_reqs]
+                    abc_reqs = [s.strip() for s in abc_reqs.split(",") if s.strip()]
 
                 abc_files = []
                 raw_abc = None
 
                 for abc_req in abc_reqs:
-                    abc_path = Path(abc_req)
+                    abc_path = Path(abc_req) if Path(abc_req).is_absolute() else (base_dir / abc_req)
                     if abc_path.is_dir():
                         if cot_mode in ["full", "melody"]:
                             abc_files.extend(abc_path.rglob(f"*-{cot_mode}.abc"))
@@ -204,6 +241,8 @@ def main():
                         track_log_details.append("Live Edited ABC String applied (forced instrumental).")
                     else:
                         active_request["abc"] = raw_abc
+            else:
+                active_request.pop("abc", None)
 
             current_output_dir = args.output / f"track_{track_number:03d}"
             current_output_dir.mkdir(exist_ok=True)
@@ -250,7 +289,6 @@ def main():
                         error_msg = status_data.get("error", "Unknown API error")
                         raise RuntimeError(f"Server generation failed: {error_msg}")
                     else:
-                        # Continue polling
                         shutdown_event.wait(3.0)
 
                 if shutdown_event.is_set():
@@ -287,11 +325,12 @@ def main():
             track_history.append(current_output_dir)
             if len(track_history) > 10:
                 old_track_dir = track_history.pop(0)
-                try:
-                    shutil.rmtree(old_track_dir)
-                    main_logger.info(f"Ring buffer: Deleted old track {old_track_dir.name} from disk.")
-                except OSError as e:
-                    main_logger.error(f"Ring buffer: Failed to delete {old_track_dir.name}: {e}")
+                if old_track_dir != playback_info.get("current_dir"):
+                    try:
+                        shutil.rmtree(old_track_dir)
+                        main_logger.info(f"Ring buffer: Deleted old track {old_track_dir.name} from disk.")
+                    except OSError as e:
+                        main_logger.error(f"Ring buffer: Failed to delete {old_track_dir.name}: {e}")
 
             track_number += 1
 
@@ -304,7 +343,6 @@ def main():
         pause_event.clear()
 
         main_logger.info("Waiting for background processes to exit...")
-        watcher_thread.join(timeout=3)
         player_thread.join(timeout=3)
         main_logger.info("Infinite Radio has shut down safely.")
 
