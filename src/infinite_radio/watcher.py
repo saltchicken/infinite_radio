@@ -10,25 +10,20 @@ sys_logger = logging.getLogger("System")
 def load_controller_config(request_path):
     controller_data = json.loads(request_path.read_text(encoding="utf-8"))
 
-    playback_defaults = {
-        "volume": 0.3,
-        "pause": False,
+    generation_defaults = {
         "ar_scale": 1.0,
         "nar_scale": 1.0
     }
-    for k, v in playback_defaults.items():
+    for k, v in generation_defaults.items():
         controller_data.setdefault(k, v)
 
     return controller_data
 
 class ConfigHandler(FileSystemEventHandler):
-    def __init__(self, request_path, shared_state, pause_event, skip_event, config_lock, playback_info):
+    def __init__(self, request_path, shared_state, config_lock):
         self.request_path = request_path.resolve()
         self.shared_state = shared_state
-        self.pause_event = pause_event
-        self.skip_event = skip_event  # Kept in signature for threading compatibility
         self.config_lock = config_lock
-        self.playback_info = playback_info
 
     def on_any_event(self, event):
         if event.is_directory:
@@ -56,14 +51,17 @@ class ConfigHandler(FileSystemEventHandler):
             controller_data = load_controller_config(self.request_path)
 
             with self.config_lock:
+                # Preserve live runtime playback settings controlled by the Web UI
+                current_volume = self.shared_state.get("volume", 0.4)
+                current_pause = self.shared_state.get("pause", False)
+
                 self.shared_state.clear()
                 self.shared_state.update(controller_data)
 
-            # Handle pause state directly from the updated shared_state
-            if self.shared_state.get("pause", False):
-                self.pause_event.set()
-            else:
-                self.pause_event.clear()
+                self.shared_state["volume"] = current_volume
+                self.shared_state["pause"] = current_pause
+
+            sys_logger.info("🔄 Reloaded generation config from controller.json")
 
         except FileNotFoundError:
             # Catch in case the file vanishes between our exists() check and read_text()
@@ -73,8 +71,8 @@ class ConfigHandler(FileSystemEventHandler):
         except Exception as e:
             sys_logger.error(f"❌ Unexpected error while updating config: {e}")
 
-def config_watcher(request_path, shared_state, pause_event, skip_event, shutdown_event, config_lock, playback_info):
-    event_handler = ConfigHandler(request_path, shared_state, pause_event, skip_event, config_lock, playback_info)
+def config_watcher(request_path, shared_state, shutdown_event, config_lock):
+    event_handler = ConfigHandler(request_path, shared_state, config_lock)
     observer = Observer()
     observer.schedule(event_handler, path=str(request_path.parent.resolve()), recursive=False)
     observer.start()

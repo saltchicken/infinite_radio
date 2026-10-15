@@ -20,7 +20,7 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
                 
                 # Apply a quick 0.5-second linear fade-out before skipping
                 with config_lock:
-                    volume = float(shared_state.get("volume", 1.0))
+                    volume = float(shared_state.get("volume", 0.4))
                 fade_samples = int(0.5 * current_fs)
                 remaining = audio_data[i:i + fade_samples] * volume
                 
@@ -38,14 +38,14 @@ def audio_player(play_queue, shared_state, config_lock, pause_event, skip_event,
             while pause_event.is_set() and not shutdown_event.is_set():
                 if stream and stream.active:
                     stream.stop()
-                    player_logger.info("Paused. Set 'pause': false in controller.json to resume.")
+                    player_logger.info("Paused. Press Play in the Remote Web UI to resume.")
                 shutdown_event.wait(0.1)
 
             if shutdown_event.is_set():
                 return "SHUTDOWN"
 
             with config_lock:
-                volume = float(shared_state.get("volume", 1.0))
+                volume = float(shared_state.get("volume", 0.4))
 
             chunk = audio_data[i:i + chunk_frames] * volume
 

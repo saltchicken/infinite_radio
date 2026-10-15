@@ -21,13 +21,16 @@ HTML_UI = """
         .container { max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
         button { background: #2c2c2e; color: white; border: none; padding: 18px 20px; font-size: 18px; border-radius: 12px; cursor: pointer; transition: background 0.1s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; }
         button:active { background: #3a3a3c; transform: scale(0.98); }
+        button.active-state { outline: 2px solid #0a84ff; background: #1c2c3e; }
         .primary { background: #0a84ff; }
         .primary:active { background: #0070e0; }
         .success { background: #30d158; }
         .success:active { background: #28a745; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .title { font-size: 28px; font-weight: 800; margin-bottom: 10px; letter-spacing: -0.5px; }
-        .label { font-size: 14px; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; margin-top: 10px; text-align: left; }
+        .label { font-size: 14px; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; margin-top: 10px; text-align: left; display: flex; justify-content: space-between; }
+        .slider-box { background: #2c2c2e; padding: 14px 18px; border-radius: 12px; display: flex; align-items: center; gap: 12px; }
+        input[type="range"] { flex: 1; accent-color: #0a84ff; height: 6px; cursor: pointer; }
         hr { width: 100%; border: 0; height: 1px; background: #38383a; margin: 10px 0; }
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #ffffff; color: #000; padding: 12px 24px; border-radius: 24px; font-weight: bold; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
     </style>
@@ -37,8 +40,18 @@ HTML_UI = """
         <div class="title">📻 Infinite Radio</div>
         
         <div class="grid-2">
-            <button onclick="post('/api/pause?state=false')">▶️ Play</button>
-            <button onclick="post('/api/pause?state=true')">⏸️ Pause</button>
+            <button id="btn-play" onclick="setPause(false)">▶️ Play</button>
+            <button id="btn-pause" onclick="setPause(true)">⏸️ Pause</button>
+        </div>
+
+        <div class="label">
+            <span>Volume</span>
+            <span id="vol-label">40%</span>
+        </div>
+        <div class="slider-box">
+            <span>🔈</span>
+            <input id="vol-slider" type="range" min="0" max="1" step="0.02" value="0.4" oninput="setVolume(this.value)">
+            <span>🔊</span>
         </div>
         
         <button class="primary" onclick="post('/api/skip')">⏭️ Skip Track</button>
@@ -62,6 +75,29 @@ HTML_UI = """
     <div id="toast">Action sent</div>
 
     <script>
+        async function syncState() {
+            try {
+                const res = await fetch('/api/state');
+                const data = await res.json();
+                document.getElementById('vol-slider').value = data.volume;
+                document.getElementById('vol-label').innerText = Math.round(data.volume * 100) + '%';
+                document.getElementById('btn-play').classList.toggle('active-state', !data.paused);
+                document.getElementById('btn-pause').classList.toggle('active-state', data.paused);
+            } catch (err) {}
+        }
+
+        async function setPause(state) {
+            await post('/api/pause?state=' + state);
+            syncState();
+        }
+
+        async function setVolume(val) {
+            document.getElementById('vol-label').innerText = Math.round(val * 100) + '%';
+            try {
+                await fetch('/api/volume?level=' + val, { method: 'POST' });
+            } catch (err) {}
+        }
+
         async function post(url) {
             try {
                 const res = await fetch(url, { method: 'POST' });
@@ -75,12 +111,16 @@ HTML_UI = """
                 showToast('❌ Network Error');
             }
         }
+
         function showToast(msg) {
             const t = document.getElementById('toast');
             t.innerText = msg;
             t.style.opacity = 1;
             setTimeout(() => t.style.opacity = 0, 2000);
         }
+
+        syncState();
+        setInterval(syncState, 3000);
     </script>
 </body>
 </html>
@@ -92,6 +132,20 @@ def create_remote_api(shared_state, pause_event, skip_event, config_lock, playba
     @app.get("/", response_class=HTMLResponse)
     def serve_ui():
         return HTML_UI
+
+    @app.get("/api/state")
+    def get_state():
+        with config_lock:
+            vol = float(shared_state.get("volume", 0.4))
+            paused = bool(shared_state.get("pause", False))
+        return {"volume": vol, "paused": paused}
+
+    @app.post("/api/volume")
+    def update_volume(level: float):
+        clamped = max(0.0, min(1.0, level))
+        with config_lock:
+            shared_state["volume"] = clamped
+        return {"status": "success", "volume": clamped}
 
     @app.post("/api/skip")
     def skip_track():

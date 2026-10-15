@@ -43,7 +43,7 @@ def main():
     api_url = args.api_url.rstrip("/")
     args.output.mkdir(parents=True, exist_ok=True)
 
-    shared_state = {}
+    shared_state = {"volume": 0.4, "pause": False}
     try:
         initial_data = load_controller_config(args.request)
         shared_state.update(initial_data)
@@ -61,7 +61,7 @@ def main():
 
     watcher_thread = threading.Thread(
         target=config_watcher,
-        args=(args.request, shared_state, pause_event, skip_event, shutdown_event, config_lock, playback_info),
+        args=(args.request, shared_state, shutdown_event, config_lock),
         daemon=True
     )
     player_thread = threading.Thread(
