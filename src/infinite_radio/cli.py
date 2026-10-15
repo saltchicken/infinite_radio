@@ -216,10 +216,39 @@ def main():
             }
 
             start_time = time.time()
+            zip_content = None
             try:
-                response = requests.post(f"{api_url}/generate", json=api_payload, timeout=600)
-                response.raise_for_status()
-            except requests.RequestException as e:
+                # 1. Submit Request
+                submit_resp = requests.post(f"{api_url}/generate", json=api_payload, timeout=15)
+                submit_resp.raise_for_status()
+                task_id = submit_resp.json()["task_id"]
+                main_logger.info(f"Task submitted to server. Task ID: {task_id}")
+
+                # 2. Poll Status
+                completed = False
+                while not completed and not shutdown_event.is_set():
+                    status_resp = requests.get(f"{api_url}/status/{task_id}", timeout=15)
+                    status_resp.raise_for_status()
+                    status_data = status_resp.json()
+                    
+                    if status_data["status"] == "completed":
+                        completed = True
+                    elif status_data["status"] == "failed":
+                        error_msg = status_data.get("error", "Unknown API error")
+                        raise RuntimeError(f"Server generation failed: {error_msg}")
+                    else:
+                        # Continue polling
+                        shutdown_event.wait(3.0)
+
+                if shutdown_event.is_set():
+                    continue
+
+                # 3. Download Result
+                download_resp = requests.get(f"{api_url}/download/{task_id}", timeout=60)
+                download_resp.raise_for_status()
+                zip_content = download_resp.content
+
+            except (requests.RequestException, RuntimeError) as e:
                 main_logger.error(f"API request failed: {e}. Retrying in 5 seconds...")
                 shutdown_event.wait(5.0)
                 continue
@@ -227,7 +256,7 @@ def main():
             elapsed = time.time() - start_time
 
             # Extract returned artifacts into current_output_dir
-            with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
+            with zipfile.ZipFile(io.BytesIO(zip_content)) as zf:
                 zf.extractall(current_output_dir)
 
             audio_path = current_output_dir / "audio.flac"

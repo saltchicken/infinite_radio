@@ -12,6 +12,6 @@
   "nar_lora": "loras/nar_lora_joint_v4.safetensors",
   "ar_scale": 0.5,
   "nar_scale": 1.0,
-  "abc": "/home/saltchicken/Projects/infinite_radio/sheetsage/vgm/snes/fzero/",
+  "abc": "/home/saltchicken/Projects/infinite_radio/sheetsage/vgm/snes/final_fantasy_6/",
   "cot": "melody"
 }

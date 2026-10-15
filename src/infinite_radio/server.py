@@ -5,6 +5,8 @@ import tempfile
 import argparse
 import logging
 import threading
+import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -25,23 +27,27 @@ logging.basicConfig(
 server_logger = logging.getLogger("YuE2Server")
 
 
-class StreamFilter:
-    """Filter to intercept and drop noisy logs containing [YuE2]"""
+class ThreadSafeStreamFilter:
+    """Filter to intercept and drop noisy logs containing [YuE2] safely across multiple threads"""
     def __init__(self, stream, target="[YuE2]"):
         self.stream = stream
         self.target = target
-        self.buf = ""
+        self.local = threading.local()
 
     def write(self, data):
-        self.buf += data
+        # Isolate the buffer per-thread to prevent concurrent log mangling
+        if not hasattr(self.local, 'buf'):
+            self.local.buf = ""
+            
+        self.local.buf += data
         while True:
-            if "\n" in self.buf:
+            if "\n" in self.local.buf:
                 splitter = "\n"
-            elif "\r" in self.buf:
+            elif "\r" in self.local.buf:
                 splitter = "\r"
             else:
                 break
-            line, self.buf = self.buf.split(splitter, 1)
+            line, self.local.buf = self.local.buf.split(splitter, 1)
             if self.target not in line:
                 self.stream.write(line + splitter)
                 self.stream.flush()
@@ -61,6 +67,11 @@ class GenerateRequest(BaseModel):
     yue_kwargs: Dict[str, Any]
 
     model_config = ConfigDict(extra="forbid")
+
+
+class TaskResponse(BaseModel):
+    task_id: str
+    status: str
 
 
 class ModelManager:
@@ -126,17 +137,14 @@ class ModelManager:
             self.ensure_model_loaded(req.ar_lora, req.nar_lora, req.ar_scale, req.nar_scale)
 
             original_stdout, original_stderr = sys.stdout, sys.stderr
-            sys.stdout = StreamFilter(sys.stdout)
-            sys.stderr = StreamFilter(sys.stderr)
+            sys.stdout = ThreadSafeStreamFilter(sys.stdout)
+            sys.stderr = ThreadSafeStreamFilter(sys.stderr)
 
             try:
                 song = self.pipe(**req.yue_kwargs)
             finally:
-                if getattr(sys.stdout, "buf", None) and "[YuE2]" not in sys.stdout.buf:
-                    original_stdout.write(sys.stdout.buf)
-                if getattr(sys.stderr, "buf", None) and "[YuE2]" not in sys.stderr.buf:
-                    original_stderr.write(sys.stderr.buf)
-                sys.stdout, sys.stderr = original_stdout, original_stderr
+                sys.stdout = original_stdout
+                sys.stderr = original_stderr
 
             # Save artifacts to a temporary directory and bundle into an in-memory ZIP
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -154,6 +162,8 @@ class ModelManager:
 
 app = FastAPI(title="YuE2 Inference Server")
 manager: Optional[ModelManager] = None
+generation_tasks: Dict[str, Any] = {}
+executor = ThreadPoolExecutor(max_workers=1)
 
 
 @app.get("/health")
@@ -161,17 +171,55 @@ def health_check():
     return {"status": "ok", "model_loaded": manager.pipe is not None if manager else False}
 
 
-@app.post("/generate")
+def process_generation_task(task_id: str, req: GenerateRequest):
+    generation_tasks[task_id]["status"] = "processing"
+    try:
+        zip_bytes = manager.generate_artifacts_zip(req)
+        generation_tasks[task_id]["result"] = zip_bytes
+        generation_tasks[task_id]["status"] = "completed"
+    except Exception as e:
+        server_logger.error(f"Generation failed for task {task_id}: {e}", exc_info=True)
+        generation_tasks[task_id]["error"] = str(e)
+        generation_tasks[task_id]["status"] = "failed"
+
+
+@app.post("/generate", response_model=TaskResponse)
 def generate_music(req: GenerateRequest):
     if manager is None:
         raise HTTPException(status_code=500, detail="ModelManager is not initialized.")
-    try:
-        server_logger.info(f"Received generation request (seed: {req.yue_kwargs.get('seed')})")
-        zip_bytes = manager.generate_artifacts_zip(req)
-        return Response(content=zip_bytes, media_type="application/zip")
-    except Exception as e:
-        server_logger.error(f"Generation failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    
+    server_logger.info(f"Received generation request (seed: {req.yue_kwargs.get('seed')})")
+    
+    task_id = str(uuid.uuid4())
+    generation_tasks[task_id] = {"status": "pending", "result": None, "error": None}
+    
+    executor.submit(process_generation_task, task_id, req)
+    
+    return TaskResponse(task_id=task_id, status="pending")
+
+
+@app.get("/status/{task_id}")
+def get_status(task_id: str):
+    if task_id not in generation_tasks:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task = generation_tasks[task_id]
+    return {"task_id": task_id, "status": task["status"], "error": task.get("error")}
+
+
+@app.get("/download/{task_id}")
+def download_result(task_id: str):
+    if task_id not in generation_tasks:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task = generation_tasks[task_id]
+    if task["status"] != "completed":
+        raise HTTPException(status_code=400, detail="Result is not ready or failed")
+    
+    zip_bytes = task["result"]
+    del generation_tasks[task_id]  # Free memory after download
+    
+    return Response(content=zip_bytes, media_type="application/zip")
 
 
 def main():
