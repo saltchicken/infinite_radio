@@ -1,5 +1,6 @@
 import sys
 import io
+import time
 import zipfile
 import tempfile
 import argparse
@@ -26,19 +27,21 @@ logging.basicConfig(
 )
 server_logger = logging.getLogger("YuE2Server")
 
+# Evict uncollected or failed tasks after 30 minutes to prevent RAM leaks
+TASK_TTL_SECONDS = 1800
+
 
 class ThreadSafeStreamFilter:
-    """Filter to intercept and drop noisy logs containing [YuE2] safely across multiple threads"""
+    """Filter to intercept and drop noisy logs containing [YuE2] safely across multiple threads."""
     def __init__(self, stream, target="[YuE2]"):
         self.stream = stream
         self.target = target
         self.local = threading.local()
 
     def write(self, data):
-        # Isolate the buffer per-thread to prevent concurrent log mangling
-        if not hasattr(self.local, 'buf'):
+        if not hasattr(self.local, "buf"):
             self.local.buf = ""
-            
+
         self.local.buf += data
         while True:
             if "\n" in self.local.buf:
@@ -75,76 +78,156 @@ class TaskResponse(BaseModel):
 
 
 class ModelManager:
-    def __init__(self, model_name: str, vae_name: str, default_ar_lora: Optional[Path] = None, default_nar_lora: Optional[Path] = None):
+    def __init__(
+        self,
+        model_name: str,
+        vae_name: str,
+        default_ar_lora: Optional[Path] = None,
+        default_nar_lora: Optional[Path] = None,
+    ):
         self.model_name = model_name
         self.vae_name = vae_name
         self.default_ar_lora = default_ar_lora
         self.default_nar_lora = default_nar_lora
 
         self.pipe = None
-        self.current_ar_scale = None
-        self.current_nar_scale = None
-        self.current_ar_lora = None
-        self.current_nar_lora = None
+        self.top_model = None
+        self.bb = None
+
+        # Cached state for fast in-place LoRA updates and unmerging
+        self.base_vae2llm_state = None
+        self.base_llm2vae_state = None
+        self.ar_data = None
+        self.nar_data = None
+
+        self.current_ar_lora: Optional[Path] = None
+        self.current_nar_lora: Optional[Path] = None
+        self.current_ar_scale: float = 0.0
+        self.current_nar_scale: float = 0.0
+
         self.lock = threading.Lock()
 
-    def ensure_model_loaded(self, req_ar_lora: Optional[str], req_nar_lora: Optional[str], ar_scale: float, nar_scale: float):
+    def _ensure_base_model(self):
+        if self.pipe is None:
+            server_logger.info(f"Loading YuE2 Base Model ({self.model_name}) into VRAM...")
+            self.pipe = YuE2Pipeline.from_pretrained(self.model_name, vae=self.vae_name, device="cuda")
+            self.top_model = self.pipe._load_model()
+            self.bb = self.top_model.model
+
+            # Cache clean copies of crossover layers on CPU in case NAR LoRA is removed later
+            self.base_vae2llm_state = {
+                k: v.detach().cpu().clone() for k, v in self.top_model.vae2llm.state_dict().items()
+            }
+            self.base_llm2vae_state = {
+                k: v.detach().cpu().clone() for k, v in self.top_model.llm2vae.state_dict().items()
+            }
+
+    def ensure_model_loaded(
+        self,
+        req_ar_lora: Optional[str],
+        req_nar_lora: Optional[str],
+        ar_scale: float,
+        nar_scale: float,
+    ):
+        self._ensure_base_model()
+
         requested_ar_lora = Path(req_ar_lora) if req_ar_lora else self.default_ar_lora
         requested_nar_lora = Path(req_nar_lora) if req_nar_lora else self.default_nar_lora
 
-        if (self.pipe is None or
-                self.current_ar_scale != ar_scale or
-                self.current_nar_scale != nar_scale or
-                self.current_ar_lora != requested_ar_lora or
-                self.current_nar_lora != requested_nar_lora):
+        if requested_ar_lora and not requested_ar_lora.exists():
+            server_logger.warning(f"Requested AR LoRA not found at: {requested_ar_lora}. Ignoring.")
+            requested_ar_lora = None
 
-            if self.pipe is not None:
-                server_logger.info("🔄 LoRA configuration change detected. Reloading model...")
-                del self.pipe
-                torch.cuda.empty_cache()
-            else:
-                server_logger.info(f"Loading YuE2 Model ({self.model_name}) into VRAM...")
+        if requested_nar_lora and not requested_nar_lora.exists():
+            server_logger.warning(f"Requested NAR LoRA not found at: {requested_nar_lora}. Ignoring.")
+            requested_nar_lora = None
 
-            self.pipe = YuE2Pipeline.from_pretrained(self.model_name, vae=self.vae_name, device="cuda")
-            top_model = self.pipe._load_model()
-            bb = top_model.model
+        # --- 1. Handle AR LoRA & Scale In-Place ---
+        if requested_ar_lora != self.current_ar_lora:
+            # Unmerge previous AR LoRA if one was active
+            if self.current_ar_lora is not None and self.ar_data is not None and self.current_ar_scale != 0.0:
+                server_logger.info(f"Unmerging previous AR LoRA ({self.current_ar_lora.name})...")
+                merge_lora(
+                    self.bb, "self_attn", "mlp", self.ar_data["lora"], scale=-self.current_ar_scale, dev="cuda"
+                )
+                self.ar_data = None
+                self.current_ar_lora = None
+                self.current_ar_scale = 0.0
 
-            if requested_ar_lora and requested_ar_lora.exists():
+            # Load and merge new AR LoRA
+            if requested_ar_lora is not None:
                 server_logger.info(f"Loading AR LoRA from {requested_ar_lora.name}...")
-                ar_data = load_ckpt(str(requested_ar_lora), "cuda")
-                n_merged = merge_lora(bb, "self_attn", "mlp", ar_data["lora"], scale=ar_scale, dev="cuda")
+                self.ar_data = load_ckpt(str(requested_ar_lora), "cuda")
+                n_merged = merge_lora(
+                    self.bb, "self_attn", "mlp", self.ar_data["lora"], scale=ar_scale, dev="cuda"
+                )
+                self.current_ar_lora = requested_ar_lora
+                self.current_ar_scale = ar_scale
                 server_logger.info(f"Merged {n_merged} AR LoRA linear layers (scale: {ar_scale}).")
-            elif requested_ar_lora:
-                server_logger.warning(f"Requested AR LoRA not found at: {requested_ar_lora}")
 
-            if requested_nar_lora and requested_nar_lora.exists():
-                server_logger.info(f"Loading NAR LoRA from {requested_nar_lora.name}...")
-                nar_data = load_ckpt(str(requested_nar_lora), "cuda")
-                n_merged = merge_lora(bb, "nar_self_attn", "nar_mlp", nar_data["lora"], scale=nar_scale, dev="cuda")
-                top_model.vae2llm.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["vae2llm"].items()})
-                top_model.llm2vae.load_state_dict({k: v.to(torch.bfloat16) for k, v in nar_data["io"]["llm2vae"].items()})
-                server_logger.info(f"Merged {n_merged} NAR LoRA linear layers (scale: {nar_scale}) & injected custom VAE/LLM crossovers.")
-            elif requested_nar_lora:
-                server_logger.warning(f"Requested NAR LoRA not found at: {requested_nar_lora}")
-
+        elif self.current_ar_lora is not None and ar_scale != self.current_ar_scale:
+            # Same AR LoRA file, just adjust the scale delta in-place
+            delta = ar_scale - self.current_ar_scale
+            merge_lora(self.bb, "self_attn", "mlp", self.ar_data["lora"], scale=delta, dev="cuda")
+            server_logger.info(f"⚡ Adjusted AR LoRA scale in-place: {self.current_ar_scale} -> {ar_scale}")
             self.current_ar_scale = ar_scale
+
+        # --- 2. Handle NAR LoRA & Scale In-Place ---
+        if requested_nar_lora != self.current_nar_lora:
+            # Unmerge previous NAR LoRA if one was active
+            if self.current_nar_lora is not None and self.nar_data is not None:
+                server_logger.info(f"Unmerging previous NAR LoRA ({self.current_nar_lora.name})...")
+                if self.current_nar_scale != 0.0:
+                    merge_lora(
+                        self.bb,
+                        "nar_self_attn",
+                        "nar_mlp",
+                        self.nar_data["lora"],
+                        scale=-self.current_nar_scale,
+                        dev="cuda",
+                    )
+                # Restore clean base crossover weights if no replacement NAR LoRA is being loaded
+                if requested_nar_lora is None:
+                    self.top_model.vae2llm.load_state_dict(
+                        {k: v.to(device="cuda", dtype=torch.bfloat16) for k, v in self.base_vae2llm_state.items()}
+                    )
+                    self.top_model.llm2vae.load_state_dict(
+                        {k: v.to(device="cuda", dtype=torch.bfloat16) for k, v in self.base_llm2vae_state.items()}
+                    )
+                self.nar_data = None
+                self.current_nar_lora = None
+                self.current_nar_scale = 0.0
+
+            # Load and merge new NAR LoRA
+            if requested_nar_lora is not None:
+                server_logger.info(f"Loading NAR LoRA from {requested_nar_lora.name}...")
+                self.nar_data = load_ckpt(str(requested_nar_lora), "cuda")
+                n_merged = merge_lora(
+                    self.bb, "nar_self_attn", "nar_mlp", self.nar_data["lora"], scale=nar_scale, dev="cuda"
+                )
+                self.top_model.vae2llm.load_state_dict(
+                    {k: v.to(device="cuda", dtype=torch.bfloat16) for k, v in self.nar_data["io"]["vae2llm"].items()}
+                )
+                self.top_model.llm2vae.load_state_dict(
+                    {k: v.to(device="cuda", dtype=torch.bfloat16) for k, v in self.nar_data["io"]["llm2vae"].items()}
+                )
+                self.current_nar_lora = requested_nar_lora
+                self.current_nar_scale = nar_scale
+                server_logger.info(
+                    f"Merged {n_merged} NAR LoRA linear layers (scale: {nar_scale}) & injected custom VAE/LLM crossovers."
+                )
+
+        elif self.current_nar_lora is not None and nar_scale != self.current_nar_scale:
+            # Same NAR LoRA file, just adjust the scale delta in-place
+            delta = nar_scale - self.current_nar_scale
+            merge_lora(self.bb, "nar_self_attn", "nar_mlp", self.nar_data["lora"], scale=delta, dev="cuda")
+            server_logger.info(f"⚡ Adjusted NAR LoRA scale in-place: {self.current_nar_scale} -> {nar_scale}")
             self.current_nar_scale = nar_scale
-            self.current_ar_lora = requested_ar_lora
-            self.current_nar_lora = requested_nar_lora
 
     def generate_artifacts_zip(self, req: GenerateRequest) -> bytes:
         with self.lock:
             self.ensure_model_loaded(req.ar_lora, req.nar_lora, req.ar_scale, req.nar_scale)
-
-            original_stdout, original_stderr = sys.stdout, sys.stderr
-            sys.stdout = ThreadSafeStreamFilter(sys.stdout)
-            sys.stderr = ThreadSafeStreamFilter(sys.stderr)
-
-            try:
-                song = self.pipe(**req.yue_kwargs)
-            finally:
-                sys.stdout = original_stdout
-                sys.stderr = original_stderr
+            song = self.pipe(**req.yue_kwargs)
 
             # Save artifacts to a temporary directory and bundle into an in-memory ZIP
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -162,8 +245,24 @@ class ModelManager:
 
 app = FastAPI(title="YuE2 Inference Server")
 manager: Optional[ModelManager] = None
-generation_tasks: Dict[str, Any] = {}
+generation_tasks: Dict[str, Dict[str, Any]] = {}
+tasks_lock = threading.Lock()
 executor = ThreadPoolExecutor(max_workers=1)
+
+
+def cleanup_stale_tasks():
+    """Evict completed or failed tasks older than TASK_TTL_SECONDS to prevent memory leaks."""
+    now = time.time()
+    with tasks_lock:
+        stale_ids = [
+            tid
+            for tid, task in generation_tasks.items()
+            if task["status"] in ("completed", "failed") and (now - task["created_at"]) > TASK_TTL_SECONDS
+        ]
+        for tid in stale_ids:
+            del generation_tasks[tid]
+    if stale_ids:
+        server_logger.info(f"🧹 Cleaned up {len(stale_ids)} stale task(s) from memory.")
 
 
 @app.get("/health")
@@ -172,53 +271,67 @@ def health_check():
 
 
 def process_generation_task(task_id: str, req: GenerateRequest):
-    generation_tasks[task_id]["status"] = "processing"
+    with tasks_lock:
+        if task_id in generation_tasks:
+            generation_tasks[task_id]["status"] = "processing"
     try:
         zip_bytes = manager.generate_artifacts_zip(req)
-        generation_tasks[task_id]["result"] = zip_bytes
-        generation_tasks[task_id]["status"] = "completed"
+        with tasks_lock:
+            if task_id in generation_tasks:
+                generation_tasks[task_id]["result"] = zip_bytes
+                generation_tasks[task_id]["status"] = "completed"
     except Exception as e:
         server_logger.error(f"Generation failed for task {task_id}: {e}", exc_info=True)
-        generation_tasks[task_id]["error"] = str(e)
-        generation_tasks[task_id]["status"] = "failed"
+        with tasks_lock:
+            if task_id in generation_tasks:
+                generation_tasks[task_id]["error"] = str(e)
+                generation_tasks[task_id]["status"] = "failed"
 
 
 @app.post("/generate", response_model=TaskResponse)
 def generate_music(req: GenerateRequest):
     if manager is None:
         raise HTTPException(status_code=500, detail="ModelManager is not initialized.")
-    
+
+    cleanup_stale_tasks()
     server_logger.info(f"Received generation request (seed: {req.yue_kwargs.get('seed')})")
-    
+
     task_id = str(uuid.uuid4())
-    generation_tasks[task_id] = {"status": "pending", "result": None, "error": None}
-    
+    with tasks_lock:
+        generation_tasks[task_id] = {
+            "status": "pending",
+            "result": None,
+            "error": None,
+            "created_at": time.time(),
+        }
+
     executor.submit(process_generation_task, task_id, req)
-    
+
     return TaskResponse(task_id=task_id, status="pending")
 
 
 @app.get("/status/{task_id}")
 def get_status(task_id: str):
-    if task_id not in generation_tasks:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    task = generation_tasks[task_id]
-    return {"task_id": task_id, "status": task["status"], "error": task.get("error")}
+    with tasks_lock:
+        if task_id not in generation_tasks:
+            raise HTTPException(status_code=404, detail="Task not found")
+        task = generation_tasks[task_id]
+        return {"task_id": task_id, "status": task["status"], "error": task.get("error")}
 
 
 @app.get("/download/{task_id}")
 def download_result(task_id: str):
-    if task_id not in generation_tasks:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    task = generation_tasks[task_id]
-    if task["status"] != "completed":
-        raise HTTPException(status_code=400, detail="Result is not ready or failed")
-    
-    zip_bytes = task["result"]
-    del generation_tasks[task_id]  # Free memory after download
-    
+    with tasks_lock:
+        if task_id not in generation_tasks:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        task = generation_tasks[task_id]
+        if task["status"] != "completed":
+            raise HTTPException(status_code=400, detail="Result is not ready or failed")
+
+        zip_bytes = task["result"]
+        del generation_tasks[task_id]  # Free memory immediately after download
+
     return Response(content=zip_bytes, media_type="application/zip")
 
 
@@ -233,6 +346,10 @@ def main():
     parser.add_argument("--nar-lora", type=Path, help="Default path to the NAR LoRA safetensors file")
     parser.add_argument("--preload", action="store_true", help="Preload the base model on startup before first request")
     args = parser.parse_args()
+
+    # Install stream filters once globally to suppress noisy [YuE2] progress bars
+    sys.stdout = ThreadSafeStreamFilter(sys.stdout)
+    sys.stderr = ThreadSafeStreamFilter(sys.stderr)
 
     manager = ModelManager(
         model_name=args.model,

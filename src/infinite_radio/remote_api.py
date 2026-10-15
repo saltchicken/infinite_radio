@@ -18,26 +18,45 @@ HTML_UI = """
     <title>Infinite Radio Remote</title>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background: #121212; color: #fff; text-align: center; padding: 20px; margin: 0; }
-        .container { max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
-        button { background: #2c2c2e; color: white; border: none; padding: 18px 20px; font-size: 18px; border-radius: 12px; cursor: pointer; transition: background 0.1s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; }
+        .container { max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+        button { background: #2c2c2e; color: white; border: none; padding: 16px 20px; font-size: 17px; border-radius: 12px; cursor: pointer; transition: background 0.1s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; }
         button:active { background: #3a3a3c; transform: scale(0.98); }
         button.active-state { outline: 2px solid #0a84ff; background: #1c2c3e; }
         .primary { background: #0a84ff; }
         .primary:active { background: #0070e0; }
         .success { background: #30d158; }
         .success:active { background: #28a745; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .title { font-size: 28px; font-weight: 800; margin-bottom: 10px; letter-spacing: -0.5px; }
-        .label { font-size: 14px; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; margin-top: 10px; text-align: left; display: flex; justify-content: space-between; }
-        .slider-box { background: #2c2c2e; padding: 14px 18px; border-radius: 12px; display: flex; align-items: center; gap: 12px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .title { font-size: 26px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.5px; }
+        .now-playing { background: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 14px; padding: 14px 16px; text-align: left; display: flex; flex-direction: column; gap: 8px; }
+        .np-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: #0a84ff; text-transform: uppercase; letter-spacing: 0.8px; }
+        .np-row { font-size: 14px; color: #e5e5ea; display: flex; flex-direction: column; gap: 2px; word-break: break-all; }
+        .np-sublabel { font-size: 11px; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; }
+        .label { font-size: 13px; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; text-align: left; display: flex; justify-content: space-between; }
+        .slider-box { background: #2c2c2e; padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; gap: 12px; }
         input[type="range"] { flex: 1; accent-color: #0a84ff; height: 6px; cursor: pointer; }
-        hr { width: 100%; border: 0; height: 1px; background: #38383a; margin: 10px 0; }
+        hr { width: 100%; border: 0; height: 1px; background: #38383a; margin: 6px 0; }
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #ffffff; color: #000; padding: 12px 24px; border-radius: 24px; font-weight: bold; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="title">📻 Infinite Radio</div>
+
+        <div class="now-playing">
+            <div class="np-header">
+                <span id="np-status">NOW PLAYING</span>
+                <span id="np-track">Waiting...</span>
+            </div>
+            <div class="np-row">
+                <span class="np-sublabel">Style</span>
+                <span id="np-style">—</span>
+            </div>
+            <div class="np-row">
+                <span class="np-sublabel">ABC Sheet</span>
+                <span id="np-abc">—</span>
+            </div>
+        </div>
         
         <div class="grid-2">
             <button id="btn-play" onclick="setPause(false)">▶️ Play</button>
@@ -54,7 +73,7 @@ HTML_UI = """
             <span>🔊</span>
         </div>
         
-        <button class="primary" onclick="post('/api/skip')">⏭️ Skip Track</button>
+        <button class="primary" onclick="skipTrack()">⏭️ Skip Track</button>
         <button class="success" onclick="post('/api/save')">💾 Save Track</button>
         
         <hr>
@@ -75,20 +94,37 @@ HTML_UI = """
     <div id="toast">Action sent</div>
 
     <script>
+        let isDraggingVolume = false;
+        const slider = document.getElementById('vol-slider');
+        slider.addEventListener('pointerdown', () => isDraggingVolume = true);
+        slider.addEventListener('pointerup', () => isDraggingVolume = false);
+
         async function syncState() {
             try {
                 const res = await fetch('/api/state');
                 const data = await res.json();
-                document.getElementById('vol-slider').value = data.volume;
-                document.getElementById('vol-label').innerText = Math.round(data.volume * 100) + '%';
+                if (!isDraggingVolume) {
+                    slider.value = data.volume;
+                    document.getElementById('vol-label').innerText = Math.round(data.volume * 100) + '%';
+                }
                 document.getElementById('btn-play').classList.toggle('active-state', !data.paused);
                 document.getElementById('btn-pause').classList.toggle('active-state', data.paused);
+
+                document.getElementById('np-status').innerText = data.paused ? 'PAUSED' : 'NOW PLAYING';
+                document.getElementById('np-track').innerText = data.track || 'Buffering...';
+                document.getElementById('np-style').innerText = data.style || '—';
+                document.getElementById('np-abc').innerText = data.abc || '—';
             } catch (err) {}
         }
 
         async function setPause(state) {
             await post('/api/pause?state=' + state);
             syncState();
+        }
+
+        async function skipTrack() {
+            await post('/api/skip');
+            setTimeout(syncState, 700);
         }
 
         async function setVolume(val) {
@@ -120,11 +156,22 @@ HTML_UI = """
         }
 
         syncState();
-        setInterval(syncState, 3000);
+        setInterval(syncState, 2000);
     </script>
 </body>
 </html>
 """
+
+
+def _format_short_path(raw_path: str | None) -> str | None:
+    """Formats a full path into 'parent_folder/filename' for clean mobile display."""
+    if not raw_path:
+        return None
+    p = Path(raw_path)
+    if p.parent and p.parent.name:
+        return f"{p.parent.name}/{p.name}"
+    return p.name
+
 
 def create_remote_api(shared_state, pause_event, skip_event, config_lock, playback_info, base_path: Path):
     app = FastAPI(title="Infinite Radio Remote Control")
@@ -138,7 +185,30 @@ def create_remote_api(shared_state, pause_event, skip_event, config_lock, playba
         with config_lock:
             vol = float(shared_state.get("volume", 0.4))
             paused = bool(shared_state.get("pause", False))
-        return {"volume": vol, "paused": paused}
+
+        curr_dir = playback_info.get("current_dir")
+        track_name = None
+        style_name = None
+        abc_name = None
+
+        if curr_dir and curr_dir.exists():
+            track_name = curr_dir.name
+            meta_path = curr_dir / "metadata.json"
+            if meta_path.exists():
+                try:
+                    meta_data = json.loads(meta_path.read_text(encoding="utf-8"))
+                    style_name = _format_short_path(meta_data.get("_source_style"))
+                    abc_name = _format_short_path(meta_data.get("_source_abc"))
+                except Exception:
+                    pass
+
+        return {
+            "volume": vol,
+            "paused": paused,
+            "track": track_name,
+            "style": style_name,
+            "abc": abc_name,
+        }
 
     @app.post("/api/volume")
     def update_volume(level: float):
