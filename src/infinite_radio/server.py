@@ -77,6 +77,16 @@ class TaskResponse(BaseModel):
     status: str
 
 
+def _load_module_state_device_safe(module: torch.nn.Module, state_dict: Dict[str, torch.Tensor]):
+    """Loads a state_dict onto whatever device & dtype the target module currently occupies."""
+    param = next(module.parameters(), None)
+    target_device = param.device if param is not None else torch.device("cpu")
+    target_dtype = param.dtype if param is not None else torch.bfloat16
+    module.load_state_dict(
+        {k: v.to(device=target_device, dtype=target_dtype) for k, v in state_dict.items()}
+    )
+
+
 class ModelManager:
     def __init__(
         self,
@@ -94,7 +104,7 @@ class ModelManager:
         self.top_model = None
         self.bb = None
 
-        # Cached state for fast in-place LoRA updates and unmerging
+        # Cached state on CPU for fast in-place LoRA updates and unmerging
         self.base_vae2llm_state = None
         self.base_llm2vae_state = None
         self.ar_data = None
@@ -154,10 +164,10 @@ class ModelManager:
                 self.current_ar_lora = None
                 self.current_ar_scale = 0.0
 
-            # Load and merge new AR LoRA
+            # Load and merge new AR LoRA (stored in CPU RAM to keep VRAM free)
             if requested_ar_lora is not None:
                 server_logger.info(f"Loading AR LoRA from {requested_ar_lora.name}...")
-                self.ar_data = load_ckpt(str(requested_ar_lora), "cuda")
+                self.ar_data = load_ckpt(str(requested_ar_lora), "cpu")
                 n_merged = merge_lora(
                     self.bb, "self_attn", "mlp", self.ar_data["lora"], scale=ar_scale, dev="cuda"
                 )
@@ -188,12 +198,8 @@ class ModelManager:
                     )
                 # Restore clean base crossover weights if no replacement NAR LoRA is being loaded
                 if requested_nar_lora is None:
-                    self.top_model.vae2llm.load_state_dict(
-                        {k: v.to(device="cuda", dtype=torch.bfloat16) for k, v in self.base_vae2llm_state.items()}
-                    )
-                    self.top_model.llm2vae.load_state_dict(
-                        {k: v.to(device="cuda", dtype=torch.bfloat16) for k, v in self.base_llm2vae_state.items()}
-                    )
+                    _load_module_state_device_safe(self.top_model.vae2llm, self.base_vae2llm_state)
+                    _load_module_state_device_safe(self.top_model.llm2vae, self.base_llm2vae_state)
                 self.nar_data = None
                 self.current_nar_lora = None
                 self.current_nar_scale = 0.0
@@ -201,16 +207,12 @@ class ModelManager:
             # Load and merge new NAR LoRA
             if requested_nar_lora is not None:
                 server_logger.info(f"Loading NAR LoRA from {requested_nar_lora.name}...")
-                self.nar_data = load_ckpt(str(requested_nar_lora), "cuda")
+                self.nar_data = load_ckpt(str(requested_nar_lora), "cpu")
                 n_merged = merge_lora(
                     self.bb, "nar_self_attn", "nar_mlp", self.nar_data["lora"], scale=nar_scale, dev="cuda"
                 )
-                self.top_model.vae2llm.load_state_dict(
-                    {k: v.to(device="cuda", dtype=torch.bfloat16) for k, v in self.nar_data["io"]["vae2llm"].items()}
-                )
-                self.top_model.llm2vae.load_state_dict(
-                    {k: v.to(device="cuda", dtype=torch.bfloat16) for k, v in self.nar_data["io"]["llm2vae"].items()}
-                )
+                _load_module_state_device_safe(self.top_model.vae2llm, self.nar_data["io"]["vae2llm"])
+                _load_module_state_device_safe(self.top_model.llm2vae, self.nar_data["io"]["llm2vae"])
                 self.current_nar_lora = requested_nar_lora
                 self.current_nar_scale = nar_scale
                 server_logger.info(

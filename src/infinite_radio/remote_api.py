@@ -1,4 +1,5 @@
 import json
+import queue
 import shutil
 import logging
 from datetime import datetime
@@ -20,17 +21,22 @@ HTML_UI = """
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background: #121212; color: #fff; text-align: center; padding: 20px; margin: 0; }
         .container { max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; padding-bottom: 40px; }
-        button { background: #2c2c2e; color: white; border: none; padding: 15px 18px; font-size: 16px; border-radius: 12px; cursor: pointer; transition: background 0.1s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; }
+        button { background: #2c2c2e; color: white; border: none; padding: 15px 16px; font-size: 15px; border-radius: 12px; cursor: pointer; transition: background 0.1s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; }
         button:active { background: #3a3a3c; transform: scale(0.98); }
         button.active-state { outline: 2px solid #0a84ff; background: #1c2c3e; }
         .primary { background: #0a84ff; }
         .primary:active { background: #0070e0; }
+        .warning { background: #ff9f0a; color: #000; }
+        .warning:active { background: #d98200; }
         .success { background: #30d158; }
         .success:active { background: #28a745; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .title { font-size: 26px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.5px; }
         .card { background: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 14px; padding: 14px 16px; text-align: left; display: flex; flex-direction: column; gap: 10px; }
         .np-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: #0a84ff; text-transform: uppercase; letter-spacing: 0.8px; }
+        .np-meta { display: flex; gap: 10px; align-items: center; color: #8e8e93; }
+        .badge { background: #2c2c2e; color: #e5e5ea; padding: 3px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; }
         .np-row { font-size: 14px; color: #e5e5ea; display: flex; flex-direction: column; gap: 2px; word-break: break-all; }
         .np-sublabel { font-size: 11px; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; }
         .label { font-size: 12px; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 4px; text-align: left; display: flex; justify-content: space-between; font-weight: 600; }
@@ -52,7 +58,10 @@ HTML_UI = """
         <div class="card">
             <div class="np-header">
                 <span id="np-status">NOW PLAYING</span>
-                <span id="np-track">Waiting...</span>
+                <div class="np-meta">
+                    <span id="np-track">Waiting...</span>
+                    <span class="badge" id="np-queue">Queue: 0</span>
+                </div>
             </div>
             <div class="np-row">
                 <span class="np-sublabel">Style</span>
@@ -79,8 +88,9 @@ HTML_UI = """
             <span>🔊</span>
         </div>
         
-        <div class="grid-2">
+        <div class="grid-3">
             <button class="primary" onclick="skipTrack()">⏭️ Skip</button>
+            <button class="warning" onclick="flushQueue()">🧹 Flush</button>
             <button class="success" onclick="post('/api/save')">💾 Save</button>
         </div>
         
@@ -94,7 +104,7 @@ HTML_UI = """
 
         <hr>
 
-        <!-- Generation Settings Panel (Replaces manual controller.json editing) -->
+        <!-- Generation Settings Panel -->
         <details open>
             <summary>⚙️ Generation Settings (Next Tracks)</summary>
             <div class="form-stack">
@@ -154,7 +164,10 @@ HTML_UI = """
                     <textarea id="cfg-extra" placeholder='{"abc_instrument": "Lead Synth", "abc_midi_program": 81}'></textarea>
                 </div>
 
-                <button class="primary" onclick="saveConfig()">💾 Apply Generation Settings</button>
+                <div class="grid-2">
+                    <button class="primary" onclick="saveConfig(false)">💾 Apply Settings</button>
+                    <button class="warning" onclick="saveConfig(true)">⚡ Apply & Flush</button>
+                </div>
             </div>
         </details>
     </div>
@@ -163,7 +176,6 @@ HTML_UI = """
 
     <script>
         let isDraggingVolume = false;
-        let configLoadedOnce = false;
         const slider = document.getElementById('vol-slider');
         slider.addEventListener('pointerdown', () => isDraggingVolume = true);
         slider.addEventListener('pointerup', () => isDraggingVolume = false);
@@ -230,7 +242,7 @@ HTML_UI = """
             } catch (err) {}
         }
 
-        async function saveConfig() {
+        async function saveConfig(flushAfter = false) {
             let extras = {};
             const rawExtra = document.getElementById('cfg-extra').value.trim();
             if (rawExtra) {
@@ -264,9 +276,31 @@ HTML_UI = """
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    showToast('✅ Settings Applied & Saved');
+                    if (flushAfter) {
+                        const flushRes = await fetch('/api/flush', { method: 'POST' });
+                        const flushData = await flushRes.json();
+                        showToast(`⚡ Applied & Flushed (${flushData.flushed} tracks)`);
+                        syncState();
+                    } else {
+                        showToast('✅ Settings Applied & Saved');
+                    }
                 } else {
                     showToast('❌ Failed to save');
+                }
+            } catch (err) {
+                showToast('❌ Network Error');
+            }
+        }
+
+        async function flushQueue() {
+            try {
+                const res = await fetch('/api/flush', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    showToast(`🧹 Flushed ${data.flushed} queued track(s)`);
+                    syncState();
+                } else {
+                    showToast('❌ Flush Failed');
                 }
             } catch (err) {
                 showToast('❌ Network Error');
@@ -286,6 +320,7 @@ HTML_UI = """
 
                 document.getElementById('np-status').innerText = data.paused ? 'PAUSED' : 'NOW PLAYING';
                 document.getElementById('np-track').innerText = data.track || 'Buffering...';
+                document.getElementById('np-queue').innerText = 'Queue: ' + (data.queued ?? 0);
                 document.getElementById('np-style').innerText = data.style || '—';
                 document.getElementById('np-abc').innerText = data.abc || '—';
             } catch (err) {}
@@ -364,6 +399,7 @@ def _persist_state(state_file: Path, shared_state: dict):
 
 def create_remote_api(
     shared_state: dict,
+    play_queue: queue.Queue,
     pause_event,
     skip_event,
     config_lock,
@@ -408,6 +444,26 @@ def create_remote_api(
         api_logger.info("⚙️ Generation settings updated via Web UI.")
         return {"status": "success", "config": snapshot}
 
+    @app.post("/api/flush")
+    def flush_queue():
+        """Drains all buffered tracks from play_queue and cleans up their folders on disk."""
+        flushed_count = 0
+        while True:
+            try:
+                _, _, track_dir = play_queue.get_nowait()
+                play_queue.task_done()
+                flushed_count += 1
+                if track_dir and track_dir.exists() and track_dir != playback_info.get("current_dir"):
+                    try:
+                        shutil.rmtree(track_dir)
+                    except OSError:
+                        pass
+            except queue.Empty:
+                break
+
+        api_logger.info(f"🧹 Flushed {flushed_count} queued track(s) from buffer.")
+        return {"status": "success", "flushed": flushed_count}
+
     @app.get("/api/state")
     def get_state():
         with config_lock:
@@ -436,6 +492,7 @@ def create_remote_api(
             "track": track_name,
             "style": style_name,
             "abc": abc_name,
+            "queued": play_queue.qsize(),
         }
 
     @app.post("/api/volume")

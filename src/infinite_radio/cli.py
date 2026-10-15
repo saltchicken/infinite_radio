@@ -102,6 +102,7 @@ def main():
 
     remote_app = create_remote_api(
         shared_state=shared_state,
+        play_queue=play_queue,
         pause_event=pause_event,
         skip_event=skip_event,
         config_lock=config_lock,
@@ -325,7 +326,7 @@ def main():
             track_history.append(current_output_dir)
             if len(track_history) > 10:
                 old_track_dir = track_history.pop(0)
-                if old_track_dir != playback_info.get("current_dir"):
+                if old_track_dir.exists() and old_track_dir != playback_info.get("current_dir"):
                     try:
                         shutil.rmtree(old_track_dir)
                         main_logger.info(f"Ring buffer: Deleted old track {old_track_dir.name} from disk.")
