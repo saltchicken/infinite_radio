@@ -2,7 +2,7 @@
   "active_style": [
     "styles/upvoted/"
   ],
-  "abc": "/home/saltchicken/Projects/infinite_radio/sheetsage/vgm/snes/secret_of_mana/",
+  "abc": "/home/saltchicken/Projects/infinite_radio/sheetsage/output/vgm/snes/soul_blazer/",
   "cot": "melody",
   "ar_lora": "loras/ar_lora_inst_v3abc.safetensors",
   "nar_lora": "loras/nar_lora_joint_v4.safetensors",
