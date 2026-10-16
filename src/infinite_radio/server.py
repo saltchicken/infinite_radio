@@ -356,7 +356,7 @@ def main():
         uvicorn.run(app, host=args.host, port=args.port, access_log=False)
     finally:
         server_logger.info("Forcing process exit to terminate background inference threads...")
-        os._exit(0)
+        executor.shutdown(wait=False, cancel_futures=True)
 
 
 if __name__ == "__main__":
