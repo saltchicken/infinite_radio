@@ -22,17 +22,22 @@ def main():
     with open(args.metadata_file, "r", encoding="utf-8") as f:
         metadata = json.load(f)
 
+    # --- NEW: Extract LoRA parameters, defaulting to original base paths if missing ---
+    ar_lora = metadata.pop("ar_lora", "loras/ar_lora_inst_v3abc.safetensors")
+    nar_lora = metadata.pop("nar_lora", "loras/nar_lora_joint_v4.safetensors")
+    ar_scale = metadata.pop("ar_scale", 0.5)
+    nar_scale = metadata.pop("nar_scale", 1.0)
+
     # Clean up local filesystem keys that the YuE2 generation pipeline doesn't accept
     for key in ["id", "_source_style", "_source_abc"]:
         metadata.pop(key, None)
 
     # Format the payload for the server
-    # Note: Using your controller.json defaults for the required LoRA bindings
     payload = {
-        "ar_lora": "loras/ar_lora_inst_v3abc.safetensors",
-        "nar_lora": "loras/nar_lora_joint_v4.safetensors",
-        "ar_scale": 0.5,
-        "nar_scale": 1.0,
+        "ar_lora": ar_lora,
+        "nar_lora": nar_lora,
+        "ar_scale": ar_scale,
+        "nar_scale": nar_scale,
         "yue_kwargs": metadata
     }
 
