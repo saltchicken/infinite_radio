@@ -36,6 +36,7 @@ DEFAULT_STATE = {
     "ar_scale": 0.5,
     "nar_scale": 1.0,
     "abc": "",
+    "abc_order": "random",  # Options: "random" or "sequential"
     "cot": "melody",
     "abc_base_dir": "sheetsage/output",
 }
@@ -82,8 +83,10 @@ def _resolve_abc_files(
     cot_mode: str,
     base_dir: Path,
 ) -> list[Path]:
-    """Scans the filesystem for matching .abc notation files."""
+    """Scans the filesystem for matching .abc notation files while preserving request order."""
     abc_files = []
+    seen = set()
+
     for abc_req in abc_reqs:
         req_path = Path(abc_req)
         if req_path.is_absolute():
@@ -94,16 +97,23 @@ def _resolve_abc_files(
         else:
             abc_path = base_dir / req_path
 
+        matched = []
         if abc_path.is_dir():
             if cot_mode in ["full", "melody"]:
-                abc_files.extend(abc_path.rglob(f"*-{cot_mode}.abc"))
+                matched = sorted(abc_path.rglob(f"*-{cot_mode}.abc"))
             else:
-                abc_files.extend(abc_path.rglob("*.abc"))
+                matched = sorted(abc_path.rglob("*.abc"))
         elif abc_path.is_file():
-            abc_files.append(abc_path)
+            matched = [abc_path]
         else:
             main_logger.warning(f"ABC path not found: {abc_path}")
-    return sorted(set(abc_files))
+
+        for f in matched:
+            if f not in seen:
+                seen.add(f)
+                abc_files.append(f)
+
+    return abc_files
 
 
 def main():
@@ -181,6 +191,7 @@ def main():
     track_number = 1
     style_history = []
     abc_history = []
+    abc_index = 0
 
     # Filesystem I/O cache state
     style_cache_key = None
@@ -249,8 +260,9 @@ def main():
             active_request["seed"] = active_request.get("seed", random.randint(0, 2**32 - 1))
             cot_mode = active_request.get("cot", "full")
 
-            # Extract the base directory for ABC files
+            # Extract the base directory and playback order for ABC files
             abc_base_dir = active_request.pop("abc_base_dir", None)
+            abc_order = active_request.pop("abc_order", "random")
 
             # Cleaned up ephemeral keys from pop target list
             for key in ["pause", "volume", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora", "id", "_source_style", "_source_abc"]:
@@ -273,15 +285,21 @@ def main():
                     abc_reqs = [s.strip() for s in abc_reqs.split(",") if s.strip()]
 
                 raw_abc = None
-                current_abc_key = (tuple(abc_reqs), str(abc_base_dir), str(cot_mode))
+                current_abc_key = (tuple(abc_reqs), str(abc_base_dir), str(cot_mode), str(abc_order))
                 now = time.monotonic()
                 if current_abc_key != abc_cache_key or (now - abc_cache_time) > CACHE_TTL_SECONDS:
                     abc_cache_files = _resolve_abc_files(abc_reqs, abc_base_dir, cot_mode, base_dir)
+                    if current_abc_key != abc_cache_key:
+                        abc_index = 0
                     abc_cache_key = current_abc_key
                     abc_cache_time = now
 
                 if abc_cache_files:
-                    chosen_abc = smart_choice(abc_cache_files, abc_history, max_memory=15)
+                    if abc_order == "sequential":
+                        chosen_abc = abc_cache_files[abc_index % len(abc_cache_files)]
+                    else:
+                        chosen_abc = smart_choice(abc_cache_files, abc_history, max_memory=15)
+
                     chosen_abc_path = str(chosen_abc)
                     track_log_details.append(f"Mode: '{cot_mode}' | Score: {chosen_abc.parent.name}/{chosen_abc.name}")
                     try:
@@ -379,6 +397,8 @@ def main():
             main_logger.info(f"Track {track_number} finished generating in {elapsed:.2f} seconds. Queued for next crossfade.")
 
             track_number += 1
+            if abc_order == "sequential" and abc_cache_files:
+                abc_index = (abc_index + 1) % len(abc_cache_files)
 
     except KeyboardInterrupt:
         main_logger.info("Shutdown signal received (Ctrl+C). Terminating gracefully...")

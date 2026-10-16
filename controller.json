@@ -9,8 +9,9 @@
   "ar_scale": 0.75,
   "nar_scale": 1,
   "abc": [
-    "vgm/"
+    "vgm/snes/mystic_quest/"
   ],
+  "abc_order": "sequential",
   "cot": "melody",
   "abc_base_dir": "sheetsage/output"
 }

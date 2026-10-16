@@ -114,11 +114,11 @@
     .chip {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       background: #242b38;
       border: 1px solid #3b465c;
       color: var(--text);
-      padding: 4px 10px;
+      padding: 4px 8px;
       border-radius: 999px;
       font-size: 0.82rem;
       font-family: monospace;
@@ -128,7 +128,8 @@
       cursor: pointer;
       color: var(--muted);
       font-weight: bold;
-      padding: 0 2px;
+      padding: 0 3px;
+      font-size: 0.78rem;
     }
     .chip button:hover { color: var(--danger); }
     .picker-row {
@@ -252,9 +253,17 @@
         </select>
       </div>
       <div class="field">
-        <label>ABC Base Directory</label>
-        <input type="text" id="abc-base-dir" value="sheetsage/output" />
+        <label>ABC Playback Order</label>
+        <select id="abc-order-select">
+          <option value="random">🔀 Random (Smart Shuffle)</option>
+          <option value="sequential">🔁 Sequential (In Order)</option>
+        </select>
       </div>
+    </div>
+
+    <div class="field">
+      <label>ABC Base Directory</label>
+      <input type="text" id="abc-base-dir" value="sheetsage/output" />
     </div>
 
     <div class="grid-2">
@@ -307,7 +316,7 @@
       return [];
     }
 
-    function renderChips(containerId, list, removeCallback) {
+    function renderChips(containerId, list, removeCallback, moveCallback = null) {
       const container = document.getElementById(containerId);
       container.innerHTML = "";
       if (list.length === 0) {
@@ -317,17 +326,28 @@
       list.forEach((item, idx) => {
         const chip = document.createElement("span");
         chip.className = "chip";
-        chip.innerHTML = `${item} <button onclick="${removeCallback}(${idx})" title="Remove">&times;</button>`;
+        const moveLeft = (moveCallback && idx > 0)
+          ? `<button onclick="${moveCallback}(${idx}, -1)" title="Move earlier">◀</button>` : "";
+        const moveRight = (moveCallback && idx < list.length - 1)
+          ? `<button onclick="${moveCallback}(${idx}, 1)" title="Move later">▶</button>` : "";
+        chip.innerHTML = `${moveLeft}${item}${moveRight} <button onclick="${removeCallback}(${idx})" title="Remove">&times;</button>`;
         container.appendChild(chip);
       });
     }
 
     function renderStyleChips() { renderChips("style-chips", activeStyles, "removeStyle"); }
-    function renderAbcChips() { renderChips("abc-chips", activeAbc, "removeAbc"); }
+    function renderAbcChips() { renderChips("abc-chips", activeAbc, "removeAbc", "moveAbc"); }
 
     function removeStyle(idx) { activeStyles.splice(idx, 1); renderStyleChips(); }
     function removeAbc(idx) { activeAbc.splice(idx, 1); renderAbcChips(); }
     function clearAbc() { activeAbc = []; renderAbcChips(); }
+
+    function moveAbc(idx, dir) {
+      const target = idx + dir;
+      if (target < 0 || target >= activeAbc.length) return;
+      [activeAbc[idx], activeAbc[target]] = [activeAbc[target], activeAbc[idx]];
+      renderAbcChips();
+    }
 
     function addFromPicker(pickerId, targetList, renderFn) {
       const sel = document.getElementById(pickerId);
@@ -367,7 +387,7 @@
         if (currentVal) sel.value = currentVal;
       });
 
-      // Populate Styles Picker (Grouped by Folders vs Files)
+      // Populate Styles Picker
       const stylePicker = document.getElementById("style-picker");
       stylePicker.innerHTML = `<option value="">+ Add discovered style folder or file...</option>`;
       if (data.styles?.folders?.length) {
@@ -393,7 +413,7 @@
         stylePicker.appendChild(grp);
       }
 
-      // Populate ABC Picker (Grouped by Collections/Games vs Individual Song Scores)
+      // Populate ABC Picker
       const abcPicker = document.getElementById("abc-picker");
       abcPicker.innerHTML = `<option value="">+ Add discovered soundtrack or song folder...</option>`;
       if (data.abc?.collections?.length) {
@@ -421,6 +441,7 @@
     }
 
     async function refreshDiscovery() {
+      await fetch("/api/options?refresh=true");
       await loadOptions();
       showToast("Directories refreshed!");
     }
@@ -435,6 +456,7 @@
       renderAbcChips();
 
       document.getElementById("cot-select").value = rawConfig.cot || "melody";
+      document.getElementById("abc-order-select").value = rawConfig.abc_order || "random";
       document.getElementById("abc-base-dir").value = rawConfig.abc_base_dir || "sheetsage/output";
       document.getElementById("ar-lora-select").value = rawConfig.ar_lora || "";
       document.getElementById("nar-lora-select").value = rawConfig.nar_lora || "";
@@ -448,6 +470,7 @@
         active_style: activeStyles,
         abc: activeAbc,
         cot: document.getElementById("cot-select").value,
+        abc_order: document.getElementById("abc-order-select").value,
         abc_base_dir: document.getElementById("abc-base-dir").value.trim(),
         ar_lora: document.getElementById("ar-lora-select").value || null,
         nar_lora: document.getElementById("nar-lora-select").value || null,

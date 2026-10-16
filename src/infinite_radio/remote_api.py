@@ -191,10 +191,15 @@ def create_remote_api(
             old_abc_base = shared_state.get("abc_base_dir")
             vol = shared_state.get("volume", 0.4)
             paused = shared_state.get("pause", False)
+            old_order = shared_state.get("abc_order", "random")
+
             shared_state.clear()
             shared_state.update(payload.settings)
+
             shared_state["volume"] = vol
             shared_state["pause"] = paused
+            shared_state.setdefault("abc_order", old_order)
+
             new_abc_base = shared_state.get("abc_base_dir")
             snapshot = shared_state.copy()
 
