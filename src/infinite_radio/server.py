@@ -1,4 +1,6 @@
+import os
 import sys
+import gc
 import io
 import time
 import zipfile
@@ -32,10 +34,9 @@ server_logger = logging.getLogger("YuE2Server")
 TASK_TTL_SECONDS = 1800
 
 
-class FilteredStream(io.StringIO):
-    """Safely intercepts standard streams locally to filter out noisy strings."""
+class FilteredStream:
+    """Lightweight stream proxy that filters noisy strings without buffering in RAM."""
     def __init__(self, original_stream, target="[YuE2]"):
-        super().__init__()
         self.original_stream = original_stream
         self.target = target
 
@@ -43,6 +44,19 @@ class FilteredStream(io.StringIO):
         if self.target not in s:
             self.original_stream.write(s)
         return len(s)
+
+    def writelines(self, lines):
+        for line in lines:
+            self.write(line)
+
+    def flush(self):
+        self.original_stream.flush()
+
+    def isatty(self):
+        return getattr(self.original_stream, "isatty", lambda: False)()
+
+    def __getattr__(self, name):
+        return getattr(self.original_stream, name)
 
 
 @contextmanager
@@ -63,19 +77,23 @@ class GenerateRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+
 class TaskResponse(BaseModel):
     task_id: str
     status: str
 
-def _load_module_state_device_safe(module: torch.nn.Module, state_dict: Dict[str, torch.Tensor], strict: bool = False):
-    """Loads a state_dict onto whatever device & dtype the target module currently occupies."""
-    param = next(module.parameters(), None)
-    target_device = param.device if param is not None else torch.device("cpu")
-    target_dtype = param.dtype if param is not None else torch.bfloat16
-    module.load_state_dict(
-        {k: v.to(device=target_device, dtype=target_dtype) for k, v in state_dict.items()},
-        strict=strict
-    )
+
+def _load_module_state_device_safe(
+    module: torch.nn.Module,
+    state_dict: Dict[str, torch.Tensor],
+    strict: bool = False
+):
+    """
+    Loads a state_dict directly in-place into the target module.
+    PyTorch's load_state_dict automatically handles device/dtype copying into existing
+    parameters without duplicating the entire state_dict in memory first.
+    """
+    module.load_state_dict(state_dict, strict=strict)
 
 
 class ModelManager:
@@ -98,8 +116,9 @@ class ModelManager:
         # Cached state on CPU for fast in-place LoRA updates and unmerging
         self.base_vae2llm_state = None
         self.base_llm2vae_state = None
-        self.pristine_bb_state = None
-        
+        self.pristine_ar_state = None
+        self.pristine_nar_state = None
+
         self.ar_data = None
         self.nar_data = None
 
@@ -125,11 +144,21 @@ class ModelManager:
                 k: v.detach().cpu().clone() for k, v in self.top_model.llm2vae.state_dict().items()
             }
 
-            # NEW: Cache the entire pristine backbone state on CPU to eliminate floating-point drift
-            server_logger.info("Caching pristine base weights in system RAM to guarantee 1:1 reproducibility...")
-            self.pristine_bb_state = {
-                k: v.detach().cpu().clone() for k, v in self.bb.state_dict().items()
+            # Cache only the LoRA-targeted backbone weights on CPU to minimize system RAM usage
+            server_logger.info("Caching pristine LoRA-target weights in system RAM for 1:1 reproducibility...")
+            bb_state = self.bb.state_dict()
+            self.pristine_ar_state = {
+                k: v.detach().cpu().clone()
+                for k, v in bb_state.items()
+                if (".self_attn." in k or ".mlp." in k) and ".nar_" not in k
             }
+            self.pristine_nar_state = {
+                k: v.detach().cpu().clone()
+                for k, v in bb_state.items()
+                if ".nar_self_attn." in k or ".nar_mlp." in k
+            }
+            del bb_state
+            gc.collect()
 
     def ensure_model_loaded(
         self,
@@ -153,22 +182,21 @@ class ModelManager:
 
         # --- 1. Handle AR LoRA (Pristine Restore + Merge) ---
         ar_changed = (requested_ar_lora != self.current_ar_lora) or (ar_scale != self.current_ar_scale)
-        
+
         if ar_changed:
             if self.current_ar_lora is not None:
                 server_logger.info("Restoring pristine AR weights from CPU cache...")
-                # Fetch only the AR-related keys from our pristine cache
-                ar_keys = {k: v for k, v in self.pristine_bb_state.items() if (".self_attn." in k or ".mlp." in k) and ".nar_" not in k}
-                _load_module_state_device_safe(self.bb, ar_keys, strict=False)
-                self.ar_data = None
+                _load_module_state_device_safe(self.bb, self.pristine_ar_state, strict=False)
+                if requested_ar_lora != self.current_ar_lora:
+                    self.ar_data = None
                 self.current_ar_lora = None
                 self.current_ar_scale = 0.0
 
             if requested_ar_lora is not None and ar_scale != 0.0:
                 server_logger.info(f"Loading AR LoRA from {requested_ar_lora.name}...")
-                if self.ar_data is None: 
+                if self.ar_data is None:
                     self.ar_data = load_ckpt(str(requested_ar_lora), "cpu")
-                
+
                 n_merged = merge_lora(self.bb, "self_attn", "mlp", self.ar_data["lora"], scale=ar_scale, dev="cuda")
                 self.current_ar_lora = requested_ar_lora
                 self.current_ar_scale = ar_scale
@@ -176,20 +204,19 @@ class ModelManager:
 
         # --- 2. Handle NAR LoRA (Pristine Restore + Merge) ---
         nar_changed = (requested_nar_lora != self.current_nar_lora) or (nar_scale != self.current_nar_scale)
-        
+
         if nar_changed:
             if self.current_nar_lora is not None:
                 server_logger.info("Restoring pristine NAR weights from CPU cache...")
-                # Fetch only the NAR-related keys from our pristine cache
-                nar_keys = {k: v for k, v in self.pristine_bb_state.items() if ".nar_self_attn." in k or ".nar_mlp." in k}
-                _load_module_state_device_safe(self.bb, nar_keys, strict=False)
-                
+                _load_module_state_device_safe(self.bb, self.pristine_nar_state, strict=False)
+
                 # Restore clean crossover weights
-                if requested_nar_lora is None:
+                if requested_nar_lora is None or nar_scale == 0.0:
                     _load_module_state_device_safe(self.top_model.vae2llm, self.base_vae2llm_state, strict=True)
                     _load_module_state_device_safe(self.top_model.llm2vae, self.base_llm2vae_state, strict=True)
-                
-                self.nar_data = None
+
+                if requested_nar_lora != self.current_nar_lora:
+                    self.nar_data = None
                 self.current_nar_lora = None
                 self.current_nar_scale = 0.0
 
@@ -197,7 +224,7 @@ class ModelManager:
                 server_logger.info(f"Loading NAR LoRA from {requested_nar_lora.name}...")
                 if self.nar_data is None:
                     self.nar_data = load_ckpt(str(requested_nar_lora), "cpu")
-                    
+
                 n_merged = merge_lora(self.bb, "nar_self_attn", "nar_mlp", self.nar_data["lora"], scale=nar_scale, dev="cuda")
                 _load_module_state_device_safe(self.top_model.vae2llm, self.nar_data["io"]["vae2llm"], strict=True)
                 _load_module_state_device_safe(self.top_model.llm2vae, self.nar_data["io"]["llm2vae"], strict=True)
@@ -205,25 +232,39 @@ class ModelManager:
                 self.current_nar_scale = nar_scale
                 server_logger.info(f"Merged {n_merged} NAR LoRA linear layers (scale: {nar_scale}) & injected crossovers.")
 
+        if ar_changed or nar_changed:
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
     def generate_artifacts_zip(self, req: GenerateRequest) -> bytes:
         with self.lock:
             self.ensure_model_loaded(req.ar_lora, req.nar_lora, req.ar_scale, req.nar_scale)
-            
-            with suppress_noisy_logs("[YuE2]"):
-                song = self.pipe(**req.yue_kwargs)
 
-            # Save artifacts to a temporary directory and bundle into an in-memory ZIP
-            with tempfile.TemporaryDirectory() as tmpdir:
-                tmp_path = Path(tmpdir)
-                song.save_artifacts(tmp_path)
+            song = None
+            try:
+                with suppress_noisy_logs("[YuE2]"):
+                    with torch.inference_mode():
+                        song = self.pipe(**req.yue_kwargs)
 
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_STORED) as zf:
-                    for file_path in tmp_path.rglob("*"):
-                        if file_path.is_file():
-                            zf.write(file_path, arcname=file_path.relative_to(tmp_path))
+                # Save artifacts to a temporary directory and bundle into an in-memory ZIP
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    tmp_path = Path(tmpdir)
+                    song.save_artifacts(tmp_path)
 
-                return zip_buffer.getvalue()
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_STORED) as zf:
+                        for file_path in tmp_path.rglob("*"):
+                            if file_path.is_file():
+                                zf.write(file_path, arcname=file_path.relative_to(tmp_path))
+
+                    return zip_buffer.getvalue()
+            finally:
+                # Explicitly release references and flush CPU/GPU memory caches after every generation
+                del song
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
 
 app = FastAPI(title="YuE2 Inference Server")
@@ -236,6 +277,7 @@ executor = ThreadPoolExecutor(max_workers=1)
 def cleanup_stale_tasks():
     """Evict completed or failed tasks older than TASK_TTL_SECONDS to prevent memory leaks."""
     now = time.time()
+    stale_ids = []
     with tasks_lock:
         stale_ids = [
             tid
@@ -245,6 +287,7 @@ def cleanup_stale_tasks():
         for tid in stale_ids:
             del generation_tasks[tid]
     if stale_ids:
+        gc.collect()
         server_logger.info(f"🧹 Cleaned up {len(stale_ids)} stale task(s) from memory.")
 
 
@@ -295,6 +338,7 @@ def generate_music(req: GenerateRequest):
 
 @app.get("/status/{task_id}")
 def get_status(task_id: str):
+    cleanup_stale_tasks()
     with tasks_lock:
         if task_id not in generation_tasks:
             raise HTTPException(status_code=404, detail="Task not found")
@@ -350,6 +394,7 @@ def main():
     finally:
         server_logger.info("Forcing process exit to terminate background inference threads...")
         os._exit(0)
+
 
 if __name__ == "__main__":
     main()
