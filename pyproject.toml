@@ -19,6 +19,7 @@ dependencies = [
     "yue2-infer @ git+https://github.com/multimodal-art-projection/YuE.git",
     "torch",
     "torchaudio",
+    "safetensors",
     "pyyaml",
     "fastapi",
     "uvicorn",
@@ -29,3 +30,6 @@ dependencies = [
 [project.scripts]
 infinite-radio = "infinite_radio.cli:main"
 infinite-radio-server = "infinite_radio.server:main"
+
+[tool.setuptools.package-data]
+infinite_radio = ["static/*"]
