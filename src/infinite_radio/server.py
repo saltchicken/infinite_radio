@@ -1,5 +1,4 @@
 import os
-import sys
 import gc
 import io
 import time
@@ -10,7 +9,6 @@ import logging
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager, redirect_stdout, redirect_stderr
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -32,40 +30,6 @@ server_logger = logging.getLogger("YuE2Server")
 
 # Evict uncollected or failed tasks after 30 minutes to prevent RAM leaks
 TASK_TTL_SECONDS = 1800
-
-
-class FilteredStream:
-    """Lightweight stream proxy that filters noisy strings without buffering in RAM."""
-    def __init__(self, original_stream, target="[YuE2]"):
-        self.original_stream = original_stream
-        self.target = target
-
-    def write(self, s):
-        if self.target not in s:
-            self.original_stream.write(s)
-        return len(s)
-
-    def writelines(self, lines):
-        for line in lines:
-            self.write(line)
-
-    def flush(self):
-        self.original_stream.flush()
-
-    def isatty(self):
-        return getattr(self.original_stream, "isatty", lambda: False)()
-
-    def __getattr__(self, name):
-        return getattr(self.original_stream, name)
-
-
-@contextmanager
-def suppress_noisy_logs(target="[YuE2]"):
-    """Context manager to suppress specific strings from third-party libraries locally."""
-    filtered_out = FilteredStream(sys.stdout, target)
-    filtered_err = FilteredStream(sys.stderr, target)
-    with redirect_stdout(filtered_out), redirect_stderr(filtered_err):
-        yield
 
 
 class GenerateRequest(BaseModel):
@@ -243,9 +207,8 @@ class ModelManager:
 
             song = None
             try:
-                with suppress_noisy_logs("[YuE2]"):
-                    with torch.inference_mode():
-                        song = self.pipe(**req.yue_kwargs)
+                with torch.inference_mode():
+                    song = self.pipe(**req.yue_kwargs)
 
                 # Save artifacts to a temporary directory and bundle into an in-memory ZIP
                 with tempfile.TemporaryDirectory() as tmpdir:
