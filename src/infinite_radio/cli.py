@@ -119,7 +119,7 @@ def main():
     api_thread = threading.Thread(
         target=uvicorn.run,
         args=(remote_app,),
-        kwargs={"host": args.ui_host, "port": args.ui_port, "log_config": None},
+        kwargs={"host": args.ui_host, "port": args.ui_port, "log_config": None, "access_log": False},
         daemon=True
     )
 
@@ -269,6 +269,12 @@ def main():
             metadata_to_save = active_request.copy()
             metadata_to_save["_source_style"] = chosen_style_path
             metadata_to_save["_source_abc"] = chosen_abc_path
+            
+            # --- NEW: Re-inject LoRA bindings into metadata for recreate_track.py ---
+            metadata_to_save["ar_lora"] = str(requested_ar_lora) if requested_ar_lora else None
+            metadata_to_save["nar_lora"] = str(requested_nar_lora) if requested_nar_lora else None
+            metadata_to_save["ar_scale"] = requested_ar_scale
+            metadata_to_save["nar_scale"] = requested_nar_scale
 
             metadata_path = current_output_dir / "metadata.json"
             with open(metadata_path, "w", encoding="utf-8") as f:
