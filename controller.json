@@ -1,15 +1,15 @@
 {
-  "volume": 0.07,
+  "volume": 0.4,
   "pause": false,
   "active_style": [
-    "styles/upvoted/house_and_techno/fisher_house.json"
+    "styles/upvoted/"
   ],
   "ar_lora": "loras/ar_lora_inst_v3abc.safetensors",
   "nar_lora": "loras/nar_lora_joint_v4.safetensors",
   "ar_scale": 0.75,
   "nar_scale": 1,
   "abc": [
-    "vgm/snes/mystic_quest/"
+    "vgm/"
   ],
   "cot": "melody",
   "abc_base_dir": "sheetsage/output"
