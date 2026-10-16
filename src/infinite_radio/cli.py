@@ -68,7 +68,7 @@ def main():
         default=Path.cwd() / "controller.json",
         help="Path to persist Web UI settings across restarts",
     )
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--save-dir", type=Path, default=Path("saved_tracks"), help="Directory to save explicitly saved tracks")
     parser.add_argument("--crossfade", type=float, default=6.0)
     parser.add_argument("--api-url", default="http://127.0.0.1:8000", help="Base URL of the YuE2 API Server")
     parser.add_argument("--ar-lora", type=str, help="Fallback path to the AR LoRA safetensors file on server")
@@ -81,7 +81,6 @@ def main():
     args = parser.parse_args()
 
     api_url = args.api_url.rstrip("/")
-    args.output.mkdir(parents=True, exist_ok=True)
     state_file = args.state_file.resolve()
     base_dir = state_file.parent
 
@@ -96,7 +95,7 @@ def main():
     config_lock = threading.Lock()
     play_queue = queue.Queue()
 
-    playback_info = {"current_dir": None}
+    playback_info = {}
 
     player_thread = threading.Thread(
         target=audio_player,
@@ -113,6 +112,7 @@ def main():
         playback_info=playback_info,
         base_path=base_dir,
         state_file=state_file,
+        save_dir=args.save_dir,
     )
     
     api_thread = threading.Thread(
@@ -132,7 +132,6 @@ def main():
     main_logger.info("==============================================")
 
     track_number = 1
-    track_history = []
     style_history = []
     abc_history = []
 
@@ -255,23 +254,14 @@ def main():
             else:
                 active_request.pop("abc", None)
 
-            current_output_dir = args.output / f"track_{track_number:03d}"
-            current_output_dir.mkdir(exist_ok=True)
-
-            # Save metadata locally
+            # Build metadata internally (not saving to disk yet)
             metadata_to_save = active_request.copy()
             metadata_to_save["_source_style"] = chosen_style_path
             metadata_to_save["_source_abc"] = chosen_abc_path
-            
-            # --- NEW: Re-inject LoRA bindings into metadata for recreate_track.py ---
             metadata_to_save["ar_lora"] = str(requested_ar_lora) if requested_ar_lora else None
             metadata_to_save["nar_lora"] = str(requested_nar_lora) if requested_nar_lora else None
             metadata_to_save["ar_scale"] = requested_ar_scale
             metadata_to_save["nar_scale"] = requested_nar_scale
-
-            metadata_path = current_output_dir / "metadata.json"
-            with open(metadata_path, "w", encoding="utf-8") as f:
-                json.dump(metadata_to_save, f, indent=2)
 
             combined_log = f"✅ Requesting Track {track_number} | " + " ".join(track_log_details)
             main_logger.info(combined_log)
@@ -323,31 +313,24 @@ def main():
 
             elapsed = time.time() - start_time
 
-            # Extract returned artifacts into current_output_dir
-            with zipfile.ZipFile(io.BytesIO(zip_content)) as zf:
-                zf.extractall(current_output_dir)
-
-            audio_path = current_output_dir / "audio.flac"
-            if not audio_path.exists():
-                main_logger.error(f"Server response did not contain audio.flac in {current_output_dir}")
+            # Decode audio directly from memory
+            try:
+                with zipfile.ZipFile(io.BytesIO(zip_content)) as zf:
+                    if "audio.flac" not in zf.namelist():
+                        main_logger.error("Server response did not contain audio.flac")
+                        continue
+                    audio_bytes = zf.read("audio.flac")
+                    
+                data, fs = sf.read(io.BytesIO(audio_bytes), dtype="float32")
+            except Exception as e:
+                main_logger.error(f"Failed to decode audio stream: {e}")
                 continue
 
-            data, fs = sf.read(audio_path, dtype="float32")
             if data.ndim == 1:
                 data = np.column_stack([data, data])
 
-            play_queue.put((data, fs, current_output_dir))
+            play_queue.put((data, fs, metadata_to_save, zip_content, track_number))
             main_logger.info(f"Track {track_number} finished generating in {elapsed:.2f} seconds. Queued for next crossfade.")
-
-            track_history.append(current_output_dir)
-            if len(track_history) > 10:
-                old_track_dir = track_history.pop(0)
-                if old_track_dir.exists() and old_track_dir != playback_info.get("current_dir"):
-                    try:
-                        shutil.rmtree(old_track_dir)
-                        main_logger.info(f"Ring buffer: Deleted old track {old_track_dir.name} from disk.")
-                    except OSError as e:
-                        main_logger.error(f"Ring buffer: Failed to delete {old_track_dir.name}: {e}")
 
             track_number += 1
 

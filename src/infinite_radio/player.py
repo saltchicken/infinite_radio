@@ -71,8 +71,10 @@ def audio_player(
     try:
         while not shutdown_event.is_set():
             try:
-                data, fs, current_track_dir = play_queue.get(timeout=1.0)
-                playback_info["current_dir"] = current_track_dir
+                data, fs, metadata, zip_content, track_num = play_queue.get(timeout=1.0)
+                playback_info["metadata"] = metadata
+                playback_info["zip_content"] = zip_content
+                playback_info["track_num"] = track_num
             except queue.Empty:
                 continue
 
@@ -95,7 +97,7 @@ def audio_player(
                 current_tail = None
                 tail_fs = None
 
-            player_logger.info(f"Transitioning into {current_track_dir.name}...")
+            player_logger.info(f"Transitioning into Track {track_num}...")
 
             if current_tail is not None and tail_fs == fs and fade_samples > 0:
                 overlap_samples = min(len(current_tail), fade_samples)

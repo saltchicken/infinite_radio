@@ -1,6 +1,7 @@
+import io
 import json
 import queue
-import shutil
+import zipfile
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -105,6 +106,7 @@ def create_remote_api(
     playback_info: dict,
     base_path: Path,
     state_file: Path,
+    save_dir: Path,
 ):
     app = FastAPI(title="Infinite Radio Remote Control")
 
@@ -160,21 +162,15 @@ def create_remote_api(
 
     @app.post("/api/flush")
     def flush_queue():
-        """Drains all buffered tracks from play_queue and cleans up their folders on disk."""
+        """Drains all buffered tracks from play_queue in memory."""
         flushed_count = 0
         while True:
             try:
-                _, _, track_dir = play_queue.get_nowait()
+                _ = play_queue.get_nowait()
                 play_queue.task_done()
                 flushed_count += 1
-                if track_dir and track_dir.exists() and track_dir != playback_info.get("current_dir"):
-                    try:
-                        shutil.rmtree(track_dir)
-                    except OSError:
-                        pass
             except queue.Empty:
                 break
-
         api_logger.info(f"🧹 Flushed {flushed_count} queued track(s) from buffer.")
         return {"status": "success", "flushed": flushed_count}
 
@@ -184,21 +180,12 @@ def create_remote_api(
             vol = float(shared_state.get("volume", 0.4))
             paused = bool(shared_state.get("pause", False))
 
-        curr_dir = playback_info.get("current_dir")
-        track_name = None
-        style_name = None
-        abc_name = None
+        metadata = playback_info.get("metadata", {})
+        track_num = playback_info.get("track_num")
 
-        if curr_dir and curr_dir.exists():
-            track_name = curr_dir.name
-            meta_path = curr_dir / "metadata.json"
-            if meta_path.exists():
-                try:
-                    meta_data = json.loads(meta_path.read_text(encoding="utf-8"))
-                    style_name = _format_short_path(meta_data.get("_source_style"))
-                    abc_name = _format_short_path(meta_data.get("_source_abc"))
-                except Exception:
-                    pass
+        track_name = f"Track {track_num}" if track_num else None
+        style_name = _format_short_path(metadata.get("_source_style"))
+        abc_name = _format_short_path(metadata.get("_source_abc"))
 
         return {
             "volume": vol,
@@ -237,22 +224,33 @@ def create_remote_api(
 
     @app.post("/api/save")
     def save_track():
-        curr_dir = playback_info.get("current_dir")
-        if not curr_dir or not curr_dir.exists():
+        zip_content = playback_info.get("zip_content")
+        metadata = playback_info.get("metadata")
+        track_num = playback_info.get("track_num")
+
+        if not zip_content or not metadata:
             raise HTTPException(status_code=400, detail="No track playing")
 
-        save_base = curr_dir.parent / "saved"
-        save_base.mkdir(exist_ok=True)
+        save_base = save_dir
+        save_base.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        save_dest = save_base / f"{curr_dir.name}_{timestamp}"
+        save_dest = save_base / f"track_{track_num}_{timestamp}"
 
         counter = 1
         while save_dest.exists():
-            save_dest = save_base / f"{curr_dir.name}_{timestamp}_{counter}"
+            save_dest = save_base / f"track_{track_num}_{timestamp}_{counter}"
             counter += 1
 
         try:
-            shutil.copytree(curr_dir, save_dest)
+            save_dest.mkdir()
+            # Unpack the in-memory zip to disk
+            with zipfile.ZipFile(io.BytesIO(zip_content)) as zf:
+                zf.extractall(save_dest)
+            
+            # Save the metadata config along with it
+            with open(save_dest / "metadata.json", "w", encoding="utf-8") as f:
+                json.dump(metadata, f, indent=2)
+
             api_logger.info(f"💾 Saved currently playing track to: {save_dest}")
             return {"status": "success", "saved_to": str(save_dest)}
         except Exception as e:
@@ -264,30 +262,26 @@ def create_remote_api(
         if feature not in ["style", "abc"] or vote_type not in ["up", "down"]:
             raise HTTPException(status_code=400, detail="Invalid feature")
 
-        curr_dir = playback_info.get("current_dir")
-        if not curr_dir or not curr_dir.exists():
+        metadata = playback_info.get("metadata")
+        track_num = playback_info.get("track_num")
+
+        if not metadata:
             raise HTTPException(status_code=400, detail="No track playing")
 
-        meta_path = curr_dir / "metadata.json"
-        if not meta_path.exists():
-            raise HTTPException(status_code=404, detail="No metadata found")
-
         try:
-            meta_data = json.loads(meta_path.read_text(encoding="utf-8"))
             votes_file = base_path / "votes.jsonl"
-
-            feature_val = meta_data.get("_source_style") if feature == "style" else meta_data.get("_source_abc")
+            feature_val = metadata.get("_source_style") if feature == "style" else metadata.get("_source_abc")
 
             vote_record = {
                 "timestamp": datetime.now().isoformat(),
                 "vote": vote_type,
                 "feature": feature,
                 "value": feature_val,
-                "track": curr_dir.name,
+                "track": f"Track {track_num}",
             }
 
-            if feature == "style" and meta_data.get("lyrics"):
-                vote_record["lyrics"] = meta_data.get("lyrics")
+            if feature == "style" and metadata.get("lyrics"):
+                vote_record["lyrics"] = metadata.get("lyrics")
 
             with open(votes_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps(vote_record) + "\n")
