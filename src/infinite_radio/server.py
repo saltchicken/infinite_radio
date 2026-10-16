@@ -77,12 +77,6 @@ class ModelManager:
         self.top_model = None
         self.bb = None
 
-        # Cached state on CPU for fast in-place LoRA updates and unmerging
-        self.base_vae2llm_state = None
-        self.base_llm2vae_state = None
-        self.pristine_ar_state = None
-        self.pristine_nar_state = None
-
         self.ar_data = None
         self.nar_data = None
 
@@ -100,30 +94,6 @@ class ModelManager:
             self.top_model = self.pipe._load_model()
             self.bb = self.top_model.model
 
-            # Cache clean copies of crossover layers on CPU in case NAR LoRA is removed later
-            self.base_vae2llm_state = {
-                k: v.detach().cpu().clone() for k, v in self.top_model.vae2llm.state_dict().items()
-            }
-            self.base_llm2vae_state = {
-                k: v.detach().cpu().clone() for k, v in self.top_model.llm2vae.state_dict().items()
-            }
-
-            # Cache only the LoRA-targeted backbone weights on CPU to minimize system RAM usage
-            server_logger.info("Caching pristine LoRA-target weights in system RAM for 1:1 reproducibility...")
-            bb_state = self.bb.state_dict()
-            self.pristine_ar_state = {
-                k: v.detach().cpu().clone()
-                for k, v in bb_state.items()
-                if (".self_attn." in k or ".mlp." in k) and ".nar_" not in k
-            }
-            self.pristine_nar_state = {
-                k: v.detach().cpu().clone()
-                for k, v in bb_state.items()
-                if ".nar_self_attn." in k or ".nar_mlp." in k
-            }
-            del bb_state
-            gc.collect()
-
     def ensure_model_loaded(
         self,
         req_ar_lora: Optional[str],
@@ -131,8 +101,6 @@ class ModelManager:
         ar_scale: float,
         nar_scale: float,
     ):
-        self._ensure_base_model()
-
         requested_ar_lora = Path(req_ar_lora) if req_ar_lora else self.default_ar_lora
         requested_nar_lora = Path(req_nar_lora) if req_nar_lora else self.default_nar_lora
 
@@ -144,57 +112,56 @@ class ModelManager:
             server_logger.warning(f"Requested NAR LoRA not found at: {requested_nar_lora}. Ignoring.")
             requested_nar_lora = None
 
-        # --- 1. Handle AR LoRA (Pristine Restore + Merge) ---
         ar_changed = (requested_ar_lora != self.current_ar_lora) or (ar_scale != self.current_ar_scale)
-
-        if ar_changed:
-            if self.current_ar_lora is not None:
-                server_logger.info("Restoring pristine AR weights from CPU cache...")
-                _load_module_state_device_safe(self.bb, self.pristine_ar_state, strict=False)
-                if requested_ar_lora != self.current_ar_lora:
-                    self.ar_data = None
-                self.current_ar_lora = None
-                self.current_ar_scale = 0.0
-
-            if requested_ar_lora is not None and ar_scale != 0.0:
-                server_logger.info(f"Loading AR LoRA from {requested_ar_lora.name}...")
-                if self.ar_data is None:
-                    self.ar_data = load_ckpt(str(requested_ar_lora), "cpu")
-
-                n_merged = merge_lora(self.bb, "self_attn", "mlp", self.ar_data["lora"], scale=ar_scale, dev="cuda")
-                self.current_ar_lora = requested_ar_lora
-                self.current_ar_scale = ar_scale
-                server_logger.info(f"Merged {n_merged} AR LoRA linear layers (scale: {ar_scale}).")
-
-        # --- 2. Handle NAR LoRA (Pristine Restore + Merge) ---
         nar_changed = (requested_nar_lora != self.current_nar_lora) or (nar_scale != self.current_nar_scale)
 
-        if nar_changed:
-            if self.current_nar_lora is not None:
-                server_logger.info("Restoring pristine NAR weights from CPU cache...")
-                _load_module_state_device_safe(self.bb, self.pristine_nar_state, strict=False)
+        # If a LoRA is already merged and we need to change it, drop the model to clear weights
+        if (ar_changed and self.current_ar_lora is not None) or (nar_changed and self.current_nar_lora is not None):
+            server_logger.info("LoRA configuration changed. Reloading base model from disk to clear old weights...")
+            self.pipe = None
+            self.top_model = None
+            self.bb = None
+            self.ar_data = None
+            self.nar_data = None
+            
+            self.current_ar_lora = None
+            self.current_nar_lora = None
+            self.current_ar_scale = 0.0
+            self.current_nar_scale = 0.0
+            
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
-                # Restore clean crossover weights
-                if requested_nar_lora is None or nar_scale == 0.0:
-                    _load_module_state_device_safe(self.top_model.vae2llm, self.base_vae2llm_state, strict=True)
-                    _load_module_state_device_safe(self.top_model.llm2vae, self.base_llm2vae_state, strict=True)
+            # Force re-application of both LoRAs since we reset the base model
+            ar_changed = True
+            nar_changed = True
 
-                if requested_nar_lora != self.current_nar_lora:
-                    self.nar_data = None
-                self.current_nar_lora = None
-                self.current_nar_scale = 0.0
+        self._ensure_base_model()
 
-            if requested_nar_lora is not None and nar_scale != 0.0:
-                server_logger.info(f"Loading NAR LoRA from {requested_nar_lora.name}...")
-                if self.nar_data is None:
-                    self.nar_data = load_ckpt(str(requested_nar_lora), "cpu")
+        # --- 1. Handle AR LoRA ---
+        if ar_changed and requested_ar_lora is not None and ar_scale != 0.0:
+            server_logger.info(f"Loading AR LoRA from {requested_ar_lora.name}...")
+            if self.ar_data is None:
+                self.ar_data = load_ckpt(str(requested_ar_lora), "cpu")
 
-                n_merged = merge_lora(self.bb, "nar_self_attn", "nar_mlp", self.nar_data["lora"], scale=nar_scale, dev="cuda")
-                _load_module_state_device_safe(self.top_model.vae2llm, self.nar_data["io"]["vae2llm"], strict=True)
-                _load_module_state_device_safe(self.top_model.llm2vae, self.nar_data["io"]["llm2vae"], strict=True)
-                self.current_nar_lora = requested_nar_lora
-                self.current_nar_scale = nar_scale
-                server_logger.info(f"Merged {n_merged} NAR LoRA linear layers (scale: {nar_scale}) & injected crossovers.")
+            n_merged = merge_lora(self.bb, "self_attn", "mlp", self.ar_data["lora"], scale=ar_scale, dev="cuda")
+            self.current_ar_lora = requested_ar_lora
+            self.current_ar_scale = ar_scale
+            server_logger.info(f"Merged {n_merged} AR LoRA linear layers (scale: {ar_scale}).")
+
+        # --- 2. Handle NAR LoRA ---
+        if nar_changed and requested_nar_lora is not None and nar_scale != 0.0:
+            server_logger.info(f"Loading NAR LoRA from {requested_nar_lora.name}...")
+            if self.nar_data is None:
+                self.nar_data = load_ckpt(str(requested_nar_lora), "cpu")
+
+            n_merged = merge_lora(self.bb, "nar_self_attn", "nar_mlp", self.nar_data["lora"], scale=nar_scale, dev="cuda")
+            _load_module_state_device_safe(self.top_model.vae2llm, self.nar_data["io"]["vae2llm"], strict=True)
+            _load_module_state_device_safe(self.top_model.llm2vae, self.nar_data["io"]["llm2vae"], strict=True)
+            self.current_nar_lora = requested_nar_lora
+            self.current_nar_scale = nar_scale
+            server_logger.info(f"Merged {n_merged} NAR LoRA linear layers (scale: {nar_scale}) & injected crossovers.")
 
         if ar_changed or nar_changed:
             gc.collect()
