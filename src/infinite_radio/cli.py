@@ -40,6 +40,9 @@ DEFAULT_STATE = {
     "abc_base_dir": "sheetsage/output",
 }
 
+# Refresh cached file lists every 5 minutes in case new files are added on disk
+CACHE_TTL_SECONDS = 300.0
+
 
 def load_initial_state(state_path: Path) -> dict:
     state = DEFAULT_STATE.copy()
@@ -57,6 +60,50 @@ def load_initial_state(state_path: Path) -> dict:
         except Exception as e:
             main_logger.warning(f"Could not write initial state file: {e}")
     return state
+
+
+def _resolve_style_files(active_styles: list[str], base_dir: Path) -> list[Path]:
+    """Scans the filesystem for matching style .json files."""
+    style_files = []
+    for style_req in active_styles:
+        style_path = (base_dir / style_req) if not Path(style_req).is_absolute() else Path(style_req)
+        if style_path.is_dir():
+            style_files.extend(style_path.rglob("*.json"))
+        elif style_path.is_file():
+            style_files.append(style_path)
+        else:
+            main_logger.warning(f"Style path not found: {style_path}")
+    return sorted(set(style_files))
+
+
+def _resolve_abc_files(
+    abc_reqs: list[str],
+    abc_base_dir: str | None,
+    cot_mode: str,
+    base_dir: Path,
+) -> list[Path]:
+    """Scans the filesystem for matching .abc notation files."""
+    abc_files = []
+    for abc_req in abc_reqs:
+        req_path = Path(abc_req)
+        if req_path.is_absolute():
+            abc_path = req_path
+        elif abc_base_dir:
+            base_abc = Path(abc_base_dir)
+            abc_path = (base_abc / req_path) if base_abc.is_absolute() else (base_dir / base_abc / req_path)
+        else:
+            abc_path = base_dir / req_path
+
+        if abc_path.is_dir():
+            if cot_mode in ["full", "melody"]:
+                abc_files.extend(abc_path.rglob(f"*-{cot_mode}.abc"))
+            else:
+                abc_files.extend(abc_path.rglob("*.abc"))
+        elif abc_path.is_file():
+            abc_files.append(abc_path)
+        else:
+            main_logger.warning(f"ABC path not found: {abc_path}")
+    return sorted(set(abc_files))
 
 
 def main():
@@ -135,6 +182,15 @@ def main():
     style_history = []
     abc_history = []
 
+    # Filesystem I/O cache state
+    style_cache_key = None
+    style_cache_files: list[Path] = []
+    style_cache_time = 0.0
+
+    abc_cache_key = None
+    abc_cache_files: list[Path] = []
+    abc_cache_time = 0.0
+
     try:
         while not shutdown_event.is_set():
             while pause_event.is_set() and not shutdown_event.is_set():
@@ -161,22 +217,23 @@ def main():
                 if isinstance(active_styles, str):
                     active_styles = [s.strip() for s in active_styles.split(",") if s.strip()]
 
-                style_files = []
-                for style_req in active_styles:
-                    style_path = (base_dir / style_req) if not Path(style_req).is_absolute() else Path(style_req)
-                    if style_path.is_dir():
-                        style_files.extend(style_path.rglob("*.json"))
-                    elif style_path.is_file():
-                        style_files.append(style_path)
-                    else:
-                        main_logger.warning(f"Style path not found: {style_path}")
+                current_style_key = tuple(active_styles)
+                now = time.monotonic()
+                if current_style_key != style_cache_key or (now - style_cache_time) > CACHE_TTL_SECONDS:
+                    style_cache_files = _resolve_style_files(active_styles, base_dir)
+                    style_cache_key = current_style_key
+                    style_cache_time = now
 
-                if style_files:
-                    style_files = list(set(style_files))
-                    chosen_style = smart_choice(style_files, style_history, max_memory=4)
+                if style_cache_files:
+                    chosen_style = smart_choice(style_cache_files, style_history, max_memory=4)
                     chosen_style_path = str(chosen_style)
                     track_log_details.append(f"Style: {chosen_style.parent.name}/{chosen_style.name}")
-                    style_data = json.loads(chosen_style.read_text(encoding="utf-8"))
+                    try:
+                        style_data = json.loads(chosen_style.read_text(encoding="utf-8"))
+                    except OSError as e:
+                        main_logger.warning(f"Cached style file inaccessible ({e}). Invalidating style cache.")
+                        style_cache_key = None
+                        continue
                 else:
                     main_logger.warning(f"No .json files found for active_style(s): {active_styles}")
 
@@ -215,35 +272,24 @@ def main():
                 if isinstance(abc_reqs, str):
                     abc_reqs = [s.strip() for s in abc_reqs.split(",") if s.strip()]
 
-                abc_files = []
                 raw_abc = None
+                current_abc_key = (tuple(abc_reqs), str(abc_base_dir), str(cot_mode))
+                now = time.monotonic()
+                if current_abc_key != abc_cache_key or (now - abc_cache_time) > CACHE_TTL_SECONDS:
+                    abc_cache_files = _resolve_abc_files(abc_reqs, abc_base_dir, cot_mode, base_dir)
+                    abc_cache_key = current_abc_key
+                    abc_cache_time = now
 
-                for abc_req in abc_reqs:
-                    req_path = Path(abc_req)
-                    if req_path.is_absolute():
-                        abc_path = req_path
-                    elif abc_base_dir:
-                        base_abc = Path(abc_base_dir)
-                        abc_path = (base_abc / req_path) if base_abc.is_absolute() else (base_dir / base_abc / req_path)
-                    else:
-                        abc_path = base_dir / req_path
-
-                    if abc_path.is_dir():
-                        if cot_mode in ["full", "melody"]:
-                            abc_files.extend(abc_path.rglob(f"*-{cot_mode}.abc"))
-                        else:
-                            abc_files.extend(abc_path.rglob("*.abc"))
-                    elif abc_path.is_file():
-                        abc_files.append(abc_path)
-                    else:
-                        main_logger.warning(f"ABC path not found: {abc_path}")
-
-                if abc_files:
-                    abc_files = list(set(abc_files))
-                    chosen_abc = smart_choice(abc_files, abc_history, max_memory=15)
+                if abc_cache_files:
+                    chosen_abc = smart_choice(abc_cache_files, abc_history, max_memory=15)
                     chosen_abc_path = str(chosen_abc)
                     track_log_details.append(f"Mode: '{cot_mode}' | Score: {chosen_abc.parent.name}/{chosen_abc.name}")
-                    raw_abc = chosen_abc.read_text(encoding="utf-8")
+                    try:
+                        raw_abc = chosen_abc.read_text(encoding="utf-8")
+                    except OSError as e:
+                        main_logger.warning(f"Cached ABC file inaccessible ({e}). Invalidating ABC cache.")
+                        abc_cache_key = None
+                        continue
                 else:
                     main_logger.warning(f"No valid .abc files found for cot '{cot_mode}'. Reverting to standard generation.")
                     active_request.pop("abc", None)

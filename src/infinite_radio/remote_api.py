@@ -1,8 +1,10 @@
 import io
 import json
+import time
 import queue
 import zipfile
 import logging
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any
@@ -11,6 +13,9 @@ from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 
 api_logger = logging.getLogger("RemoteAPI")
+
+# Cache directory scans for the Web UI dropdowns for 5 minutes
+OPTIONS_CACHE_TTL = 300.0
 
 
 class ConfigUpdatePayload(BaseModel):
@@ -119,6 +124,13 @@ def create_remote_api(
 ):
     app = FastAPI(title="Infinite Radio Remote Control")
 
+    options_cache_lock = threading.Lock()
+    options_cache: Dict[str, Any] = {
+        "key": None,
+        "time": 0.0,
+        "data": None,
+    }
+
     @app.get("/", response_class=HTMLResponse)
     def serve_ui():
         # Serve the HTML cleanly from the static directory
@@ -128,8 +140,23 @@ def create_remote_api(
         return FileResponse(html_path)
 
     @app.get("/api/options")
-    def get_options():
+    def get_options(refresh: bool = False):
         """Auto-discovers available LoRAs, style folders/files, and ABC directories for the Web UI."""
+        with config_lock:
+            abc_base_dir_str = shared_state.get("abc_base_dir", "sheetsage/output")
+
+        cache_key = str(abc_base_dir_str)
+        now = time.monotonic()
+
+        with options_cache_lock:
+            if (
+                not refresh
+                and options_cache["data"] is not None
+                and options_cache["key"] == cache_key
+                and (now - options_cache["time"]) <= OPTIONS_CACHE_TTL
+            ):
+                return options_cache["data"]
+
         lora_dir = base_path / "loras"
         loras = []
         if lora_dir.is_dir():
@@ -137,17 +164,21 @@ def create_remote_api(
                 p.relative_to(base_path).as_posix() for p in lora_dir.rglob("*.safetensors")
             )
 
-        with config_lock:
-            abc_base_dir_str = shared_state.get("abc_base_dir", "sheetsage/output")
-
         styles_info = _discover_styles(base_path)
         abc_info = _discover_abc(base_path, abc_base_dir_str)
 
-        return {
+        result = {
             "loras": loras,
             "styles": styles_info,
             "abc": abc_info,
         }
+
+        with options_cache_lock:
+            options_cache["key"] = cache_key
+            options_cache["time"] = time.monotonic()
+            options_cache["data"] = result
+
+        return result
 
     @app.get("/api/config")
     def get_config():
@@ -157,13 +188,19 @@ def create_remote_api(
     @app.post("/api/config")
     def update_config(payload: ConfigUpdatePayload):
         with config_lock:
+            old_abc_base = shared_state.get("abc_base_dir")
             vol = shared_state.get("volume", 0.4)
             paused = shared_state.get("pause", False)
             shared_state.clear()
             shared_state.update(payload.settings)
             shared_state["volume"] = vol
             shared_state["pause"] = paused
+            new_abc_base = shared_state.get("abc_base_dir")
             snapshot = shared_state.copy()
+
+        if old_abc_base != new_abc_base:
+            with options_cache_lock:
+                options_cache["data"] = None
 
         _persist_state(state_file, snapshot)
         api_logger.info("⚙️ Generation settings updated via Web UI.")
