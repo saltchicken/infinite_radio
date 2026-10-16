@@ -15,7 +15,6 @@ import numpy as np
 import soundfile as sf
 import uvicorn
 
-from .utils.abc_utils import force_instrumental_abc
 from .utils.shuffle_utils import smart_choice
 from .player import audio_player
 from .remote_api import create_remote_api
@@ -194,9 +193,6 @@ def main():
             active_request["seed"] = active_request.get("seed", random.randint(0, 2**32 - 1))
             cot_mode = active_request.get("cot", "full")
 
-            inst_name = active_request.pop("abc_instrument", None)
-            midi_prog = active_request.pop("abc_midi_program", None)
-
             # Extract the base directory for ABC files
             abc_base_dir = active_request.pop("abc_base_dir", None)
 
@@ -254,11 +250,8 @@ def main():
                     active_request.pop("abc", None)
 
                 if raw_abc:
-                    if inst_name is not None and midi_prog is not None:
-                        active_request["abc"] = force_instrumental_abc(raw_abc, inst_name, midi_prog)
-                        track_log_details.append("Live Edited ABC String applied (forced instrumental).")
-                    else:
-                        active_request["abc"] = raw_abc
+                    active_request["abc"] = raw_abc
+
             else:
                 active_request.pop("abc", None)
 
