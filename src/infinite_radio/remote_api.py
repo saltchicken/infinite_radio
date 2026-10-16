@@ -17,14 +17,23 @@ class ConfigUpdatePayload(BaseModel):
     settings: Dict[str, Any]
 
 
-def _format_short_path(raw_path: str | None) -> str | None:
-    """Formats a full path into 'parent_folder/filename' for clean mobile display."""
+def _format_short_path(raw_path: str | None, is_abc: bool = False) -> str | None:
+    """Formats a full path into 'parent_folder/filename' without extensions for clean mobile display."""
     if not raw_path:
         return None
     p = Path(raw_path)
+    name = p.stem  # drops the extension (.json, .abc)
+
+    # For SheetSage ABCs, navigate up to the game folder instead of showing "melody" or "full"
+    if is_abc and p.parent.name in ("melody", "full"):
+        # Structure: <game>/<song>-score/{melody,full}/<song>.abc
+        game_folder = p.parents[2].name if len(p.parents) > 2 else ""
+        if game_folder:
+            return f"{game_folder}/{name}"
+
     if p.parent and p.parent.name:
-        return f"{p.parent.name}/{p.name}"
-    return p.name
+        return f"{p.parent.name}/{name}"
+    return name
 
 
 def _persist_state(state_file: Path, shared_state: dict):
@@ -184,8 +193,8 @@ def create_remote_api(
         track_num = playback_info.get("track_num")
 
         track_name = f"Track {track_num}" if track_num else None
-        style_name = _format_short_path(metadata.get("_source_style"))
-        abc_name = _format_short_path(metadata.get("_source_abc"))
+        style_name = _format_short_path(metadata.get("_source_style"), is_abc=False)
+        abc_name = _format_short_path(metadata.get("_source_abc"), is_abc=True)
 
         return {
             "volume": vol,
