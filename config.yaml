@@ -1,21 +1,24 @@
-# Infinite Radio Default Configuration
+# --- Generation & Playback Defaults ---
 volume: 0.4
+pause: false
 active_style:
   - "styles/"
-abc: "vgm/"
 abc_order: "random"
 cot: "melody"
 abc_base_dir: "sheetsage/output"
+abc: "vgm/"
 
-# Model Defaults
-ar_lora: "loras/ar_lora_inst_v3abc.safetensors"
-nar_lora: "loras/nar_lora_joint_v4.safetensors"
+# --- LoRA Defaults ---
 ar_scale: 0.5
 nar_scale: 1.0
 
-# Postprocessing
-enable_postprocessing: True
-target_lufs: -12.0
+# --- DSP & Post-Processing (Updated) ---
+# Normalization (LUFS)
+enable_normalization: true
+target_lufs: -14.0
+
+# Live Reverb Effect
+enable_reverb: true
 reverb_room_size: 0.3
 reverb_damping: 0.5
 reverb_wet_level: 0.05

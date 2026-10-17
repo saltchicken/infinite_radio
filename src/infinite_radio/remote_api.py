@@ -23,6 +23,15 @@ class ConfigUpdatePayload(BaseModel):
     settings: Dict[str, Any]
 
 
+class DSPUpdatePayload(BaseModel):
+    enable_normalization: bool
+    enable_reverb: bool
+    reverb_room_size: float
+    reverb_damping: float
+    reverb_wet_level: float
+    reverb_dry_level: float
+
+
 def _format_short_path(raw_path: str | None, is_abc: bool = False) -> str | None:
     """Formats a full path into 'parent_folder/filename' without extensions for clean mobile display."""
     if not raw_path:
@@ -199,6 +208,17 @@ def create_remote_api(
 
         api_logger.info("⚙️ Generation settings updated via Web UI.")
         return {"status": "success", "config": snapshot}
+
+    @app.post("/api/dsp")
+    def update_dsp(payload: DSPUpdatePayload):
+        with config_lock:
+            shared_state["enable_normalization"] = payload.enable_normalization
+            shared_state["enable_reverb"] = payload.enable_reverb
+            shared_state["reverb_room_size"] = payload.reverb_room_size
+            shared_state["reverb_damping"] = payload.reverb_damping
+            shared_state["reverb_wet_level"] = payload.reverb_wet_level
+            shared_state["reverb_dry_level"] = payload.reverb_dry_level
+        return {"status": "success"}
 
     @app.post("/api/flush")
     def flush_queue():

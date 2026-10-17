@@ -16,7 +16,6 @@ import numpy as np
 import soundfile as sf
 import uvicorn
 import pyloudnorm as pyln
-from pedalboard import Pedalboard, Reverb
 
 from .utils.shuffle_utils import smart_choice
 from .player import audio_player
@@ -50,7 +49,8 @@ DEFAULT_STATE = {
     "cot": "melody",
     "abc_base_dir": "sheetsage/output",
     # DSP Settings
-    "enable_postprocessing": True,
+    "enable_normalization": True,
+    "enable_reverb": True,
     "reverb_room_size": 0.3,
     "reverb_damping": 0.5,
     "reverb_wet_level": 0.15,
@@ -374,19 +374,8 @@ def main():
             if data.ndim == 1:
                 data = np.column_stack([data, data])
 
-            if controller_req.get("enable_postprocessing", True):
-                # Extract DSP settings from the current configuration state
-                room_size = float(controller_req.get("reverb_room_size", 0.3))
-                damping = float(controller_req.get("reverb_damping", 0.5))
-                wet_level = float(controller_req.get("reverb_wet_level", 0.15))
-                dry_level = float(controller_req.get("reverb_dry_level", 0.85))
+            if controller_req.get("enable_normalization", True):
                 target_lufs = float(controller_req.get("target_lufs", -14.0))
-
-                # Apply a subtle "mastering" reverb
-                board = Pedalboard([
-                    Reverb(room_size=room_size, damping=damping, wet_level=wet_level, dry_level=dry_level)
-                ])
-                data = board(data.T, fs).T
 
                 # Measure and normalize the perceived loudness
                 meter = pyln.Meter(fs)

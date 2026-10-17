@@ -2,6 +2,7 @@ import queue
 import numpy as np
 import sounddevice as sd
 import logging
+from pedalboard import Pedalboard, Reverb
 
 player_logger = logging.getLogger("Player")
 
@@ -20,6 +21,10 @@ def audio_player(
     current_tail = None
     tail_fs = None
 
+    # Persistent DSP objects to maintain reverb tails across chunks
+    reverb = Reverb(room_size=0.3, damping=0.5, wet_level=0.15, dry_level=0.85)
+    board = Pedalboard([reverb])
+
     def stream_write_interruptible(audio_data, chunk_frames, current_fs):
         for i in range(0, len(audio_data), chunk_frames):
             if shutdown_event.is_set():
@@ -29,9 +34,9 @@ def audio_player(
                 skip_event.clear()
                 player_logger.info("⏭️ Skipping current track...")
 
-                # Apply a quick 0.5-second equal-power fade-out before skipping
                 with config_lock:
                     volume = float(shared_state.get("volume", 0.4))
+                
                 fade_samples = int(0.5 * current_fs)
                 remaining = audio_data[i : i + fade_samples] * volume
 
@@ -56,10 +61,29 @@ def audio_player(
             if shutdown_event.is_set():
                 return "SHUTDOWN"
 
+            # 1. Read live volume and DSP state from UI
             with config_lock:
                 volume = float(shared_state.get("volume", 0.4))
+                enable_reverb = shared_state.get("enable_reverb", True)
+                if enable_reverb:
+                    reverb.room_size = float(shared_state.get("reverb_room_size", 0.3))
+                    reverb.damping = float(shared_state.get("reverb_damping", 0.5))
+                    reverb.wet_level = float(shared_state.get("reverb_wet_level", 0.15))
+                    reverb.dry_level = float(shared_state.get("reverb_dry_level", 0.85))
 
+            # 2. Extract and apply volume
             chunk = audio_data[i : i + chunk_frames] * volume
+
+            # 3. Apply live Reverb chunk-by-chunk
+            if enable_reverb:
+                # Pedalboard expects (channels, samples) so we transpose (.T)
+                # reset=False ensures the reverb tail carries over seamlessly into the next chunk
+                chunk = board(chunk.T, current_fs, reset=False).T
+                # Hard limit to prevent extreme reverb resonance from clipping the output
+                chunk = np.clip(chunk, -0.99, 0.99)
+
+            # Ensure C-contiguous memory layout after pedalboard modifications
+            chunk = np.ascontiguousarray(chunk, dtype=np.float32)
 
             if stream is not None:
                 if not stream.active:
@@ -81,7 +105,8 @@ def audio_player(
             track_length = len(data)
             max_fade = track_length // 2
             fade_samples = min(int(crossfade_sec * fs), max_fade)
-            # 50ms chunks for responsive volume slider, pause, and skip controls
+            
+            # 50ms chunks for rapid response to slider updates
             chunk_size = max(1, int(fs * 0.05))
 
             if stream is None:
@@ -93,7 +118,6 @@ def audio_player(
                 stream.close()
                 stream = sd.OutputStream(samplerate=fs, channels=data.shape[1], dtype="float32")
                 stream.start()
-                # Discard incompatible tail from previous sample rate/channel count
                 current_tail = None
                 tail_fs = None
 
@@ -104,11 +128,11 @@ def audio_player(
                 tail = current_tail[-overlap_samples:]
                 head = data[:overlap_samples]
 
-                # Equal-power crossfade curves (constant perceived loudness)
                 t = np.linspace(0.0, 1.0, overlap_samples, dtype=np.float32)[:, None]
                 fade_out = np.cos(t * (np.pi / 2.0)).astype(np.float32)
                 fade_in = np.sin(t * (np.pi / 2.0)).astype(np.float32)
 
+                # Crossfade dry signals, DSP handles the merged transition organically
                 transition = (tail * fade_out) + (head * fade_in)
 
                 status = stream_write_interruptible(transition, chunk_size, fs)
