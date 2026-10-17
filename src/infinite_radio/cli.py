@@ -14,6 +14,7 @@ import requests
 import numpy as np
 import soundfile as sf
 import uvicorn
+import pyloudnorm as pyln
 
 from .utils.shuffle_utils import smart_choice
 from .player import audio_player
@@ -363,6 +364,12 @@ def main():
 
             if data.ndim == 1:
                 data = np.column_stack([data, data])
+
+            # Measure and normalize the perceived loudness to -14 LUFS
+            meter = pyln.Meter(fs)
+            current_loudness = meter.integrated_loudness(data)
+            # Cast back to float32 to prevent sounddevice dtype mismatch
+            data = pyln.normalize.loudness(data, current_loudness, -14.0).astype(np.float32)
 
             play_queue.put((data, fs, metadata_to_save, zip_content, track_number))
             main_logger.info(f"Track {track_number} finished generating in {elapsed:.2f} seconds. Queued for next crossfade.")

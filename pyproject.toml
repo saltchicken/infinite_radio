@@ -24,7 +24,8 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "requests",
-    "pydantic"
+    "pydantic",
+    "pyloudnorm"
 ]
 
 [project.scripts]
