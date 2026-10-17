@@ -1,0 +1,36 @@
+{
+  "id": "vintage_afrobeat",
+  "choices": {
+    "bpm": [115, 120, 125, 128]
+  },
+  "style": "{bpm}, vintage afrobeat, polyrhythmic percussion, driving bassline, interlocking scratchy electric guitars, tight brass section, energetic, tropical, funky groove, pure instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Polyrhythmic Percussion Intro]",
+      "[Scratchy Rhythm Guitar Entry]",
+      "[Driving Bassline Drop]",
+      "[Punchy Brass Section Hook]",
+      "[Tenor Saxophone Solo]",
+      "[Full Band Outro]"
+    ],
+    [
+      "[Drum Kit and Congas Intro]",
+      "[Interlocking Guitar Groove]",
+      "[Trumpet Melody Entry]",
+      "[Call and Response Brass]",
+      "[Percussion Breakdown]",
+      "[High Energy Climax]",
+      "[Fade Out]"
+    ],
+    [
+      "[Electric Piano Chord Intro]",
+      "[Funky Bass Slap]",
+      "[Fast Upbeat Groove]",
+      "[Baritone Sax Solo]",
+      "[Intense Brass Crescendo]",
+      "[Sudden Stop]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19721972
+}

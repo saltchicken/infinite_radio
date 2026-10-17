@@ -1,0 +1,36 @@
+{
+  "id": "medieval_dungeon_synth",
+  "choices": {
+    "bpm": [60, 70, 80, 90]
+  },
+  "style": "{bpm}, dungeon synth, lo-fi fantasy ambient, 90s digital keyboard patches, slow harpsichord, eerie choir pads, dark medieval castle, atmospheric, nostalgic rpg soundtrack, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Eerie Choir Pad Intro]",
+      "[Slow Harpsichord Melody]",
+      "[Low Timpani Drum Hit]",
+      "[Lo-Fi String Swell]",
+      "[Dark Ambient Bridge]",
+      "[Majestic Organ Climax]",
+      "[Fade to Silence]"
+    ],
+    [
+      "[Wind and Rain FX Intro]",
+      "[Plucked Lute Synth]",
+      "[Ominous Drone Entry]",
+      "[Slow Melancholic Flute Patch]",
+      "[Echoing Cave Reverb]",
+      "[Long Outro]"
+    ],
+    [
+      "[Digital Bell Chime Intro]",
+      "[Marching Snare Snare Drum]",
+      "[Triumphant Brass Synth]",
+      "[Royal Court Breakdown]",
+      "[Final Dark Chord]",
+      "[Sudden End]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19961996
+}

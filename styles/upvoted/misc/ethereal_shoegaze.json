@@ -1,0 +1,37 @@
+{
+  "id": "ethereal_shoegaze",
+  "choices": {
+    "bpm": [110, 115, 120, 130]
+  },
+  "style": "{bpm}, shoegaze, dream pop, wall of sound, washed out fuzz guitars, heavy reverb, ethereal pads, driving indie rock beat, melancholic, nostalgic, dense mix, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Guitar Feedback Intro]",
+      "[Massive Wall of Sound Drop]",
+      "[Driving Drum Groove]",
+      "[Washed Out Melody]",
+      "[Dynamic Breakdown]",
+      "[Epic Fuzz Climax]",
+      "[Feedback Fade Out]"
+    ],
+    [
+      "[Clean Chorus Guitar Intro]",
+      "[Tom Drum Build Up]",
+      "[Explosive Fuzz Guitar Entry]",
+      "[Soaring Ethereal Lead]",
+      "[Quiet Bridge]",
+      "[Final Crashing Chorus]",
+      "[Slow Fade]"
+    ],
+    [
+      "[Dense Reverb Swell]",
+      "[Fast Indie Rock Beat]",
+      "[Tremolo Picked Guitar]",
+      "[Overwhelming Distortion Overload]",
+      "[Melancholic Resolution]",
+      "[Sudden End]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19911991
+}
