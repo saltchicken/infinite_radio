@@ -1,3 +1,4 @@
+import warnings
 import io
 import zipfile
 import argparse
@@ -390,7 +391,9 @@ def main():
                 # Measure and normalize the perceived loudness
                 meter = pyln.Meter(fs)
                 current_loudness = meter.integrated_loudness(data)
-                data = pyln.normalize.loudness(data, current_loudness, target_lufs)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", UserWarning)
+                    data = pyln.normalize.loudness(data, current_loudness, target_lufs)
 
                 # Prevent hard clipping from normalization gain
                 data = np.clip(data, -0.99, 0.99)
