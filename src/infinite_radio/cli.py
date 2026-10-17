@@ -6,7 +6,6 @@ import random
 import threading
 import queue
 import time
-import shutil
 import logging
 from pathlib import Path
 
@@ -18,6 +17,13 @@ import uvicorn
 from .utils.shuffle_utils import smart_choice
 from .player import audio_player
 from .remote_api import create_remote_api
+from .client import (
+    DEFAULT_API_URL,
+    DEFAULT_AR_LORA,
+    DEFAULT_NAR_LORA,
+    build_api_payload,
+    generate_and_download,
+)
 
 # --- Logging Configuration ---
 logging.basicConfig(
@@ -31,8 +37,8 @@ DEFAULT_STATE = {
     "volume": 0.4,
     "pause": False,
     "active_style": ["styles/upvoted/"],
-    "ar_lora": "loras/ar_lora_inst_v3abc.safetensors",
-    "nar_lora": "loras/nar_lora_joint_v4.safetensors",
+    "ar_lora": DEFAULT_AR_LORA,
+    "nar_lora": DEFAULT_NAR_LORA,
     "ar_scale": 0.5,
     "nar_scale": 1.0,
     "abc": "",
@@ -127,7 +133,7 @@ def main():
     )
     parser.add_argument("--save-dir", type=Path, default=Path("saved_tracks"), help="Directory to save explicitly saved tracks")
     parser.add_argument("--crossfade", type=float, default=6.0)
-    parser.add_argument("--api-url", default="http://127.0.0.1:8000", help="Base URL of the YuE2 API Server")
+    parser.add_argument("--api-url", default=DEFAULT_API_URL, help="Base URL of the YuE2 API Server")
     parser.add_argument("--ar-lora", type=str, help="Fallback path to the AR LoRA safetensors file on server")
     parser.add_argument("--nar-lora", type=str, help="Fallback path to the NAR LoRA safetensors file on server")
     
@@ -251,22 +257,12 @@ def main():
             active_request = style_data.copy()
             active_request.update(controller_req)
 
-            # Extract LoRA settings for the API wrapper
-            requested_ar_scale = float(active_request.get("ar_scale", 1.0))
-            requested_nar_scale = float(active_request.get("nar_scale", 1.0))
-            requested_ar_lora = active_request.get("ar_lora") or args.ar_lora
-            requested_nar_lora = active_request.get("nar_lora") or args.nar_lora
-
             active_request["seed"] = active_request.get("seed", random.randint(0, 2**32 - 1))
             cot_mode = active_request.get("cot", "full")
 
             # Extract the base directory and playback order for ABC files
             abc_base_dir = active_request.pop("abc_base_dir", None)
             abc_order = active_request.pop("abc_order", "random")
-
-            # Cleaned up ephemeral keys from pop target list
-            for key in ["pause", "volume", "active_style", "ar_scale", "nar_scale", "ar_lora", "nar_lora", "id", "_source_style", "_source_abc"]:
-                active_request.pop(key, None)
 
             if isinstance(active_request.get("lyrics"), list):
                 chosen = random.choice(active_request["lyrics"])
@@ -318,61 +314,40 @@ def main():
             else:
                 active_request.pop("abc", None)
 
-            # Build metadata internally (not saving to disk yet)
-            metadata_to_save = active_request.copy()
+            # Build API payload and stripped yue_kwargs via shared client utility
+            api_payload = build_api_payload(
+                active_request,
+                default_ar_lora=args.ar_lora,
+                default_nar_lora=args.nar_lora,
+                default_ar_scale=1.0,
+                default_nar_scale=1.0,
+            )
+
+            # Build metadata internally for saving if requested via Web UI
+            metadata_to_save = api_payload["yue_kwargs"].copy()
             metadata_to_save["_source_style"] = chosen_style_path
             metadata_to_save["_source_abc"] = chosen_abc_path
-            metadata_to_save["ar_lora"] = str(requested_ar_lora) if requested_ar_lora else None
-            metadata_to_save["nar_lora"] = str(requested_nar_lora) if requested_nar_lora else None
-            metadata_to_save["ar_scale"] = requested_ar_scale
-            metadata_to_save["nar_scale"] = requested_nar_scale
+            metadata_to_save["ar_lora"] = api_payload["ar_lora"]
+            metadata_to_save["nar_lora"] = api_payload["nar_lora"]
+            metadata_to_save["ar_scale"] = api_payload["ar_scale"]
+            metadata_to_save["nar_scale"] = api_payload["nar_scale"]
 
             combined_log = f"✅ Requesting Track {track_number} | " + " ".join(track_log_details)
             main_logger.info(combined_log)
 
-            api_payload = {
-                "ar_lora": str(requested_ar_lora) if requested_ar_lora else None,
-                "nar_lora": str(requested_nar_lora) if requested_nar_lora else None,
-                "ar_scale": requested_ar_scale,
-                "nar_scale": requested_nar_scale,
-                "yue_kwargs": active_request,
-            }
-
             start_time = time.time()
-            zip_content = None
             try:
-                # 1. Submit Request
-                submit_resp = requests.post(f"{api_url}/generate", json=api_payload, timeout=15)
-                submit_resp.raise_for_status()
-                task_id = submit_resp.json()["task_id"]
-                main_logger.info(f"Task submitted to server. Task ID: {task_id}")
-
-                # 2. Poll Status
-                completed = False
-                while not completed and not shutdown_event.is_set():
-                    status_resp = requests.get(f"{api_url}/status/{task_id}", timeout=15)
-                    status_resp.raise_for_status()
-                    status_data = status_resp.json()
-                    
-                    if status_data["status"] == "completed":
-                        completed = True
-                    elif status_data["status"] == "failed":
-                        error_msg = status_data.get("error", "Unknown API error")
-                        raise RuntimeError(f"Server generation failed: {error_msg}")
-                    else:
-                        shutdown_event.wait(3.0)
-
-                if shutdown_event.is_set():
-                    continue
-
-                # 3. Download Result
-                download_resp = requests.get(f"{api_url}/download/{task_id}", timeout=60)
-                download_resp.raise_for_status()
-                zip_content = download_resp.content
-
+                zip_content = generate_and_download(
+                    api_payload,
+                    api_url=api_url,
+                    shutdown_event=shutdown_event,
+                )
             except (requests.RequestException, RuntimeError) as e:
                 main_logger.error(f"API request failed: {e}. Retrying in 5 seconds...")
                 shutdown_event.wait(5.0)
+                continue
+
+            if not zip_content or shutdown_event.is_set():
                 continue
 
             elapsed = time.time() - start_time

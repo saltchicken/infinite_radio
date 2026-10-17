@@ -9,7 +9,7 @@
   "ar_scale": 0.75,
   "nar_scale": 1,
   "abc": [
-    "vgm/snes/mystic_quest/"
+    "vgm/switch/octopath_traveler/"
   ],
   "abc_order": "sequential",
   "cot": "melody",

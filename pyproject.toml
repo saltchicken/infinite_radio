@@ -30,6 +30,7 @@ dependencies = [
 [project.scripts]
 infinite-radio = "infinite_radio.cli:main"
 infinite-radio-server = "infinite_radio.server:main"
+infinite-radio-recreate = "infinite_radio.client:recreate_main"
 
 [tool.setuptools.package-data]
 infinite_radio = ["static/*"]
