@@ -229,7 +229,6 @@ def main():
             chosen_style_path = None
             chosen_abc_path = None
 
-            track_log_details = []
             style_data = {}
             if "active_style" in controller_req and controller_req["active_style"]:
                 active_styles = controller_req["active_style"]
@@ -246,7 +245,6 @@ def main():
                 if style_cache_files:
                     chosen_style = smart_choice(style_cache_files, style_history, max_memory=4)
                     chosen_style_path = str(chosen_style)
-                    track_log_details.append(f"Style: {chosen_style.parent.name}/{chosen_style.name}")
                     try:
                         style_data = json.loads(chosen_style.read_text(encoding="utf-8"))
                     except OSError as e:
@@ -299,7 +297,6 @@ def main():
                         chosen_abc = smart_choice(abc_cache_files, abc_history, max_memory=15)
 
                     chosen_abc_path = str(chosen_abc)
-                    track_log_details.append(f"Mode: '{cot_mode}' | Score: {chosen_abc.parent.name}/{chosen_abc.name}")
                     try:
                         raw_abc = chosen_abc.read_text(encoding="utf-8")
                     except OSError as e:
@@ -333,9 +330,6 @@ def main():
             metadata_to_save["nar_lora"] = api_payload["nar_lora"]
             metadata_to_save["ar_scale"] = api_payload["ar_scale"]
             metadata_to_save["nar_scale"] = api_payload["nar_scale"]
-
-            combined_log = f"✅ Requesting Track {track_number} | " + " ".join(track_log_details)
-            main_logger.info(combined_log)
 
             start_time = time.time()
             try:
