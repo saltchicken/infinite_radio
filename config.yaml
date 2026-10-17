@@ -1,7 +1,7 @@
 # Infinite Radio Default Configuration
 volume: 0.4
 active_style:
-  - "styles/upvoted/"
+  - "styles/"
 abc: "vgm/"
 abc_order: "random"
 cot: "melody"
@@ -14,9 +14,9 @@ ar_scale: 0.5
 nar_scale: 1.0
 
 # Postprocessing
-enable_postprocessing: False
+enable_postprocessing: True
 target_lufs: -12.0
 reverb_room_size: 0.3
 reverb_damping: 0.5
-reverb_wet_level: 0.15
-reverb_dry_level: 0.85
+reverb_wet_level: 0.05
+reverb_dry_level: 0.95
