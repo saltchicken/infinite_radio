@@ -210,6 +210,24 @@
     </summary>
     
     <div style="margin-top: 16px;">
+      <!-- Playlist Manager Section -->
+      <div class="field" style="background: #141820; padding: 14px; border-radius: 8px; margin-bottom: 20px; border: 1px dashed #3b465c;">
+        <label style="color: var(--text); font-size: 0.95rem; margin-bottom: 10px;">💾 Saved Playlists & Presets</label>
+        
+        <div class="picker-row">
+          <select id="playlist-select">
+            <option value="">-- Select a Playlist --</option>
+          </select>
+          <button onclick="loadPlaylist()" class="primary">Load</button>
+          <button onclick="deletePlaylist()" class="danger">Delete</button>
+        </div>
+        
+        <div class="picker-row" style="margin-top: 10px;">
+          <input type="text" id="new-playlist-name" placeholder="Name for new playlist..." autocomplete="off" />
+          <button onclick="saveCurrentAsPlaylist()">Save Current</button>
+        </div>
+      </div>
+
       <div class="status-row" style="margin-bottom: 14px;">
         <span style="font-size: 0.85rem; color: var(--muted);">Configure styles, ABC scores, and LoRAs.</span>
         <button onclick="refreshDiscovery()" style="padding: 5px 10px; font-size: 0.8rem;">🔄 Refresh Directories</button>
@@ -354,6 +372,7 @@
     let activeAbc = [];
     let rawConfig = {};
     let isDraggingVolume = false;
+    let playlistsData = {};
 
     function showToast(msg) {
       const t = document.getElementById("toast");
@@ -532,6 +551,85 @@
       showToast("Configuration saved!");
     }
 
+    async function fetchPlaylists() {
+      try {
+        const res = await fetch("/api/playlists");
+        const data = await res.json();
+        playlistsData = data.playlists || {};
+        
+        const sel = document.getElementById("playlist-select");
+        // Keep the first default option
+        sel.innerHTML = '<option value="">-- Select a Playlist --</option>';
+        
+        Object.keys(playlistsData).sort().forEach(name => {
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          sel.appendChild(opt);
+        });
+      } catch (err) {
+        console.error("Failed to load playlists", err);
+      }
+    }
+
+    async function loadPlaylist() {
+      const name = document.getElementById("playlist-select").value;
+      if (!name || !playlistsData[name]) return;
+      
+      const pl = playlistsData[name];
+      activeStyles = pl.active_style || [];
+      activeAbc = pl.abc || [];
+      document.getElementById("abc-order-select").value = pl.abc_order || "random";
+      document.getElementById("cot-select").value = pl.cot || "melody";
+      
+      renderStyleChips();
+      renderAbcChips();
+      
+      // Automatically apply the configuration to the backend
+      await saveConfig();
+      showToast(`Loaded playlist: ${name}`);
+    }
+
+    async function saveCurrentAsPlaylist() {
+      const name = document.getElementById("new-playlist-name").value.trim();
+      if (!name) {
+        alert("Please enter a name for the playlist.");
+        return;
+      }
+
+      const playlistState = {
+        active_style: activeStyles,
+        abc: activeAbc,
+        abc_order: document.getElementById("abc-order-select").value,
+        cot: document.getElementById("cot-select").value
+      };
+
+      await fetch("/api/playlists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name, playlist: playlistState })
+      });
+
+      showToast(`Saved playlist: ${name}`);
+      document.getElementById("new-playlist-name").value = "";
+      
+      // Refresh the dropdown and auto-select the new playlist
+      await fetchPlaylists();
+      document.getElementById("playlist-select").value = name;
+    }
+
+    async function deletePlaylist() {
+      const name = document.getElementById("playlist-select").value;
+      if (!name) return;
+      
+      if (!confirm(`Are you sure you want to delete the playlist '${name}'?`)) return;
+
+      await fetch(`/api/playlists?name=${encodeURIComponent(name)}`, { method: "DELETE" });
+      
+      showToast("Playlist deleted!");
+      await fetchPlaylists();
+    }
+
     let dspTimeout;
     function liveDSPUpdate() {
       clearTimeout(dspTimeout);
@@ -629,6 +727,7 @@
     (async function init() {
       await loadOptions();
       await loadConfig();
+      await fetchPlaylists();
       connectSSE();
     })();
   </script>

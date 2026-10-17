@@ -33,6 +33,18 @@ class DSPUpdatePayload(BaseModel):
     reverb_dry_level: float
 
 
+class PlaylistData(BaseModel):
+    active_style: list[str]
+    abc: list[str]
+    abc_order: str
+    cot: str
+
+
+class SavePlaylistPayload(BaseModel):
+    name: str
+    playlist: PlaylistData
+
+
 def _format_short_path(raw_path: str | None, is_abc: bool = False) -> str | None:
     """Formats a full path into 'parent_folder/filename' without extensions for clean mobile display."""
     if not raw_path:
@@ -143,6 +155,15 @@ def create_remote_api(
                     file_path TEXT PRIMARY KEY
                 )
             ''')
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS playlists (
+                    name TEXT PRIMARY KEY,
+                    active_style TEXT,
+                    abc TEXT,
+                    abc_order TEXT,
+                    cot TEXT
+                )
+            ''')
             conn.commit()
     except Exception as e:
         api_logger.error(f"Failed to initialize SQLite database: {e}")
@@ -246,6 +267,62 @@ def create_remote_api(
             shared_state["reverb_wet_level"] = payload.reverb_wet_level
             shared_state["reverb_dry_level"] = payload.reverb_dry_level
         return {"status": "success"}
+
+    @app.get("/api/playlists")
+    def get_playlists():
+        try:
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT name, active_style, abc, abc_order, cot FROM playlists")
+                rows = cursor.fetchall()
+                
+                playlists = {}
+                for row in rows:
+                    playlists[row[0]] = {
+                        "active_style": json.loads(row[1]) if row[1] else [],
+                        "abc": json.loads(row[2]) if row[2] else [],
+                        "abc_order": row[3],
+                        "cot": row[4]
+                    }
+                return {"playlists": playlists}
+        except Exception as e:
+            api_logger.error(f"Failed to read playlists from DB: {e}")
+            return {"playlists": {}}
+
+    @app.post("/api/playlists")
+    def save_playlist(payload: SavePlaylistPayload):
+        try:
+            with sqlite3.connect(db_path) as conn:
+                pl = payload.playlist
+                # INSERT OR REPLACE handles both creating new and overwriting existing presets
+                conn.execute('''
+                    INSERT OR REPLACE INTO playlists (name, active_style, abc, abc_order, cot)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (
+                    payload.name,
+                    json.dumps(pl.active_style),
+                    json.dumps(pl.abc),
+                    pl.abc_order,
+                    pl.cot
+                ))
+                conn.commit()
+            api_logger.info(f"💾 Saved playlist preset to DB: {payload.name}")
+            return {"status": "success"}
+        except Exception as e:
+            api_logger.error(f"Failed to save playlist to DB: {e}")
+            raise HTTPException(status_code=500, detail="Database error")
+
+    @app.delete("/api/playlists")
+    def delete_playlist(name: str):
+        try:
+            with sqlite3.connect(db_path) as conn:
+                conn.execute("DELETE FROM playlists WHERE name = ?", (name,))
+                conn.commit()
+            api_logger.info(f"🗑️ Deleted playlist preset from DB: {name}")
+            return {"status": "success"}
+        except Exception as e:
+            api_logger.error(f"Failed to delete playlist from DB: {e}")
+            raise HTTPException(status_code=500, detail="Database error")
 
     @app.post("/api/flush")
     def flush_queue():
