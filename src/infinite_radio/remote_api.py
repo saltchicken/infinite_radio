@@ -6,6 +6,7 @@ import zipfile
 import logging
 import threading
 import asyncio
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any
@@ -123,6 +124,29 @@ def create_remote_api(
 ):
     app = FastAPI(title="Infinite Radio Remote Control")
 
+    db_path = base_path / "votes.db"
+    try:
+        with sqlite3.connect(db_path) as conn:
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS votes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT,
+                    vote TEXT,
+                    feature TEXT,
+                    value TEXT,
+                    track TEXT,
+                    lyrics TEXT
+                )
+            ''')
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS favorite_abcs (
+                    file_path TEXT PRIMARY KEY
+                )
+            ''')
+            conn.commit()
+    except Exception as e:
+        api_logger.error(f"Failed to initialize SQLite database: {e}")
+
     options_cache_lock = threading.Lock()
     options_cache: Dict[str, Any] = {
         "key": None,
@@ -165,6 +189,9 @@ def create_remote_api(
 
         styles_info = _discover_styles(base_path)
         abc_info = _discover_abc(base_path, abc_base_dir_str)
+        
+        # Inject the virtual favorites directory at the top of the collections list
+        abc_info["collections"].insert(0, "⭐ Favorites (SQLite)")
 
         result = {
             "loras": loras,
@@ -360,7 +387,30 @@ def create_remote_api(
         try:
             votes_file = base_path / "votes.jsonl"
             feature_val = metadata.get("_source_style") if feature == "style" else metadata.get("_source_abc")
+            
+            # 1. Save to the new SQLite Database
+            with sqlite3.connect(db_path) as conn:
+                conn.execute('''
+                    INSERT INTO votes (timestamp, vote, feature, value, track, lyrics)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    datetime.now().isoformat(),
+                    vote_type,
+                    feature,
+                    feature_val,
+                    f"Track {track_num}",
+                    metadata.get("lyrics") if feature == "style" else None
+                ))
+                
+                # If it's an ABC upvote, add it to the virtual directory table
+                if feature == "abc" and vote_type == "up" and feature_val:
+                    conn.execute('''
+                        INSERT OR IGNORE INTO favorite_abcs (file_path)
+                        VALUES (?)
+                    ''', (feature_val,))
+                conn.commit()
 
+            # 2. Maintain JSONL fallback for existing scripts
             vote_record = {
                 "timestamp": datetime.now().isoformat(),
                 "vote": vote_type,
@@ -376,7 +426,7 @@ def create_remote_api(
                 f.write(json.dumps(vote_record) + "\n")
 
             icon = "⭐" if vote_type == "up" else "👎"
-            api_logger.info(f"{icon} {vote_type.title()}voted {feature}! Saved to {votes_file.name}")
+            api_logger.info(f"{icon} {vote_type.title()}voted {feature}! Saved to DB and {votes_file.name}")
             return {"status": "success", "record": vote_record}
 
         except Exception as e:

@@ -9,6 +9,7 @@ import threading
 import queue
 import time
 import logging
+import sqlite3
 from pathlib import Path
 
 import requests
@@ -102,11 +103,31 @@ def _resolve_abc_files(
     cot_mode: str,
     base_dir: Path,
 ) -> list[Path]:
-    """Scans the filesystem for matching .abc notation files while preserving request order."""
+    """Scans the filesystem (or SQLite DB) for matching .abc notation files while preserving request order."""
     abc_files = []
     seen = set()
+    db_path = base_dir / "votes.db"
 
     for abc_req in abc_reqs:
+        # Intercept the virtual favorites directory flag
+        if abc_req == "⭐ Favorites (SQLite)":
+            if db_path.exists():
+                try:
+                    with sqlite3.connect(db_path) as conn:
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT file_path FROM favorite_abcs")
+                        for row in cursor.fetchall():
+                            f_path = Path(row[0])
+                            if f_path.exists() and f_path not in seen:
+                                seen.add(f_path)
+                                abc_files.append(f_path)
+                except Exception as e:
+                    main_logger.warning(f"Failed to load favorites from database: {e}")
+            else:
+                main_logger.warning("Favorites DB does not exist yet. Vote up some ABCs first!")
+            continue
+
+        # Standard file path resolution
         req_path = Path(abc_req)
         if req_path.is_absolute():
             abc_path = req_path
