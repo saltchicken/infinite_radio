@@ -353,6 +353,7 @@
     let activeStyles = [];
     let activeAbc = [];
     let rawConfig = {};
+    let isDraggingVolume = false;
 
     function showToast(msg) {
       const t = document.getElementById("toast");
@@ -555,10 +556,12 @@
       showToast("Configuration saved!");
     }
 
-    async function pollState() {
-      try {
-        const res = await fetch("/api/state");
-        const state = await res.json();
+    function connectSSE() {
+      const evtSource = new EventSource("/api/stream");
+      
+      evtSource.onmessage = function(event) {
+        const state = JSON.parse(event.data);
+        
         document.getElementById("queue-badge").textContent = `Queued: ${state.queued}`;
         document.getElementById("np-track").textContent = state.track || "Buffering...";
         document.getElementById("np-style").textContent = state.style || "—";
@@ -566,21 +569,42 @@
 
         currentPaused = state.paused;
         document.getElementById("pause-btn").textContent = currentPaused ? "▶️ Resume" : "⏸️ Pause";
-      } catch (e) {}
+        
+        // Prevent volume slider from jumping around if the user is actively sliding it
+        if (!isDraggingVolume) {
+          const slider = document.getElementById("vol-slider");
+          if (Math.abs(slider.value - state.volume) > 0.01) {
+            slider.value = state.volume;
+            document.getElementById("vol-label").textContent = `${Math.round(state.volume * 100)}%`;
+          }
+        }
+      };
+
+      evtSource.onerror = function(err) {
+        console.error("SSE connection error. Reconnecting...", err);
+      };
     }
 
     function onVolumeSlide(val) {
+      isDraggingVolume = true;
       document.getElementById("vol-label").textContent = `${Math.round(val * 100)}%`;
     }
 
     async function commitVolume(val) {
       onVolumeSlide(val);
       await fetch(`/api/volume?level=${encodeURIComponent(val)}`, { method: "POST" });
+      isDraggingVolume = false;
     }
+
+    // Capture mousedown/touchstart to reliably track drag states
+    const volSlider = document.getElementById("vol-slider");
+    volSlider.addEventListener('mousedown', () => isDraggingVolume = true);
+    volSlider.addEventListener('touchstart', () => isDraggingVolume = true);
+    volSlider.addEventListener('mouseup', () => isDraggingVolume = false);
+    volSlider.addEventListener('touchend', () => isDraggingVolume = false);
 
     async function togglePause() {
       await fetch(`/api/pause?state=${!currentPaused}`, { method: "POST" });
-      pollState();
     }
 
     async function skipTrack() {
@@ -598,7 +622,6 @@
       const res = await fetch("/api/flush", { method: "POST" });
       const data = await res.json();
       showToast(`Flushed ${data.flushed} queued track(s)`);
-      pollState();
     }
 
     async function sendVote(feature, type) {
@@ -609,8 +632,7 @@
     (async function init() {
       await loadOptions();
       await loadConfig();
-      await pollState();
-      setInterval(pollState, 2000);
+      connectSSE();
     })();
   </script>
 </body>

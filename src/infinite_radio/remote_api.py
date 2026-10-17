@@ -5,11 +5,12 @@ import queue
 import zipfile
 import logging
 import threading
+import asyncio
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 api_logger = logging.getLogger("RemoteAPI")
@@ -213,8 +214,41 @@ def create_remote_api(
         api_logger.info(f"🧹 Flushed {flushed_count} queued track(s) from buffer.")
         return {"status": "success", "flushed": flushed_count}
 
+    @app.get("/api/stream")
+    async def stream_state():
+        """Streams state updates to the UI using Server-Sent Events (SSE)."""
+        async def event_generator():
+            while True:
+                # Briefly acquire the lock to read shared state securely
+                with config_lock:
+                    vol = float(shared_state.get("volume", 0.4))
+                    paused = bool(shared_state.get("pause", False))
+
+                metadata = playback_info.get("metadata", {})
+                track_num = playback_info.get("track_num")
+
+                track_name = f"Track {track_num}" if track_num else None
+                style_name = _format_short_path(metadata.get("_source_style"), is_abc=False)
+                abc_name = _format_short_path(metadata.get("_source_abc"), is_abc=True)
+
+                state = {
+                    "volume": vol,
+                    "paused": paused,
+                    "track": track_name,
+                    "style": style_name,
+                    "abc": abc_name,
+                    "queued": play_queue.qsize(),
+                }
+                
+                yield f"data: {json.dumps(state)}\n\n"
+                # Push an update every 1 second
+                await asyncio.sleep(1.0)
+
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
+
     @app.get("/api/state")
     def get_state():
+        """Fallback REST state endpoint (still useful for CLI tools or debugging)."""
         with config_lock:
             vol = float(shared_state.get("volume", 0.4))
             paused = bool(shared_state.get("pause", False))
