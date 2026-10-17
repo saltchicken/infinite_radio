@@ -220,14 +220,9 @@
         <label>Active Styles (Folders or JSON files)</label>
         <div id="style-chips" class="chips-container"></div>
         <div class="picker-row">
-          <select id="style-picker">
-            <option value="">+ Add discovered style folder or file...</option>
-          </select>
+          <input type="text" id="style-picker" list="style-list" placeholder="Search discovered styles or type custom path..." autocomplete="off" onkeypress="if(event.key === 'Enter') addFromPicker('style-picker', activeStyles, renderStyleChips)" />
+          <datalist id="style-list"></datalist>
           <button onclick="addFromPicker('style-picker', activeStyles, renderStyleChips)">Add</button>
-        </div>
-        <div class="picker-row">
-          <input type="text" id="custom-style-input" placeholder="Or type custom style path..." />
-          <button onclick="addCustom('custom-style-input', activeStyles, renderStyleChips)">Add Path</button>
         </div>
       </div>
 
@@ -236,15 +231,10 @@
         <label>ABC Score Directories (Relative to ABC Base Dir)</label>
         <div id="abc-chips" class="chips-container"></div>
         <div class="picker-row">
-          <select id="abc-picker">
-            <option value="">+ Add discovered soundtrack or song folder...</option>
-          </select>
+          <input type="text" id="abc-picker" list="abc-list" placeholder="Search discovered ABCs or type custom path..." autocomplete="off" onkeypress="if(event.key === 'Enter') addFromPicker('abc-picker', activeAbc, renderAbcChips)" />
+          <datalist id="abc-list"></datalist>
           <button onclick="addFromPicker('abc-picker', activeAbc, renderAbcChips)">Add</button>
           <button onclick="clearAbc()" title="Disable ABC conditioning">Clear All</button>
-        </div>
-        <div class="picker-row">
-          <input type="text" id="custom-abc-input" placeholder="Or type custom ABC path..." />
-          <button onclick="addCustom('custom-abc-input', activeAbc, renderAbcChips)">Add Path</button>
         </div>
       </div>
 
@@ -414,22 +404,12 @@
 
     function addFromPicker(pickerId, targetList, renderFn) {
       const sel = document.getElementById(pickerId);
-      const val = sel.value;
+      const val = sel.value.trim();
       if (val && !targetList.includes(val)) {
         targetList.push(val);
         renderFn();
       }
       sel.value = "";
-    }
-
-    function addCustom(inputId, targetList, renderFn) {
-      const inp = document.getElementById(inputId);
-      const val = inp.value.trim();
-      if (val && !targetList.includes(val)) {
-        targetList.push(val);
-        renderFn();
-      }
-      inp.value = "";
     }
 
     async function loadOptions() {
@@ -450,56 +430,40 @@
         if (currentVal) sel.value = currentVal;
       });
 
-      // Populate Styles Picker
-      const stylePicker = document.getElementById("style-picker");
-      stylePicker.innerHTML = `<option value="">+ Add discovered style folder or file...</option>`;
+      // Populate Styles Datalist
+      const styleList = document.getElementById("style-list");
+      styleList.innerHTML = "";
       if (data.styles?.folders?.length) {
-        const grp = document.createElement("optgroup");
-        grp.label = "📁 Style Folders";
         data.styles.folders.forEach(f => {
           const opt = document.createElement("option");
           opt.value = f;
-          opt.textContent = f;
-          grp.appendChild(opt);
+          styleList.appendChild(opt);
         });
-        stylePicker.appendChild(grp);
       }
       if (data.styles?.files?.length) {
-        const grp = document.createElement("optgroup");
-        grp.label = "📄 Style JSON Files";
         data.styles.files.forEach(f => {
           const opt = document.createElement("option");
           opt.value = f;
-          opt.textContent = f;
-          grp.appendChild(opt);
+          styleList.appendChild(opt);
         });
-        stylePicker.appendChild(grp);
       }
 
-      // Populate ABC Picker
-      const abcPicker = document.getElementById("abc-picker");
-      abcPicker.innerHTML = `<option value="">+ Add discovered soundtrack or song folder...</option>`;
+      // Populate ABC Datalist
+      const abcList = document.getElementById("abc-list");
+      abcList.innerHTML = "";
       if (data.abc?.collections?.length) {
-        const grp = document.createElement("optgroup");
-        grp.label = "🎮 Soundtrack / Collection Folders";
         data.abc.collections.forEach(c => {
           const opt = document.createElement("option");
           opt.value = c;
-          opt.textContent = c;
-          grp.appendChild(opt);
+          abcList.appendChild(opt);
         });
-        abcPicker.appendChild(grp);
       }
       if (data.abc?.songs?.length) {
-        const grp = document.createElement("optgroup");
-        grp.label = "🎵 Individual Song Score Folders";
         data.abc.songs.forEach(s => {
           const opt = document.createElement("option");
           opt.value = s;
-          opt.textContent = s;
-          grp.appendChild(opt);
+          abcList.appendChild(opt);
         });
-        abcPicker.appendChild(grp);
       }
     }
 
