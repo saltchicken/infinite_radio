@@ -2,6 +2,7 @@ import io
 import zipfile
 import argparse
 import json
+import yaml
 import random
 import threading
 import queue
@@ -51,21 +52,23 @@ DEFAULT_STATE = {
 CACHE_TTL_SECONDS = 300.0
 
 
-def load_initial_state(state_path: Path) -> dict:
+def load_config(config_path: Path) -> dict:
+    """Reads the static YAML configuration file to set base defaults."""
     state = DEFAULT_STATE.copy()
-    if state_path.exists():
+    if config_path.exists():
         try:
-            saved = json.loads(state_path.read_text(encoding="utf-8"))
-            state.update(saved)
-            main_logger.info(f"Loaded saved state from {state_path.name}")
+            with open(config_path, "r", encoding="utf-8") as f:
+                user_config = yaml.safe_load(f)
+            if user_config:
+                state.update(user_config)
+            main_logger.info(f"Loaded configuration from {config_path.name}")
         except Exception as e:
-            main_logger.warning(f"Could not parse {state_path.name} ({e}). Using defaults.")
+            main_logger.warning(f"Could not parse {config_path.name} ({e}). Using hardcoded defaults.")
     else:
-        try:
-            state_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
-            main_logger.info(f"Created initial state file at {state_path.name}")
-        except Exception as e:
-            main_logger.warning(f"Could not write initial state file: {e}")
+        main_logger.info(f"No {config_path.name} found. Using hardcoded defaults.")
+    
+    # Ensure ephemeral state starts clean regardless of config file
+    state["pause"] = False 
     return state
 
 
@@ -125,11 +128,11 @@ def _resolve_abc_files(
 def main():
     parser = argparse.ArgumentParser(description="Infinite Radio Client")
     parser.add_argument(
-        "--state-file",
-        dest="state_file",
+        "-c", "--config",
+        dest="config_file",
         type=Path,
-        default=Path.cwd() / "controller.json",
-        help="Path to persist Web UI settings across restarts",
+        default=Path.cwd() / "config.yaml",
+        help="Path to the static YAML configuration file",
     )
     parser.add_argument("--save-dir", type=Path, default=Path("saved_tracks"), help="Directory to save explicitly saved tracks")
     parser.add_argument("--crossfade", type=float, default=6.0)
@@ -144,10 +147,10 @@ def main():
     args = parser.parse_args()
 
     api_url = args.api_url.rstrip("/")
-    state_file = args.state_file.resolve()
-    base_dir = state_file.parent
+    config_file = args.config_file.resolve()
+    base_dir = config_file.parent
 
-    shared_state = load_initial_state(state_file)
+    shared_state = load_config(config_file)
 
     pause_event = threading.Event()
     if shared_state.get("pause", False):
@@ -174,7 +177,6 @@ def main():
         config_lock=config_lock,
         playback_info=playback_info,
         base_path=base_dir,
-        state_file=state_file,
         save_dir=args.save_dir,
     )
     

@@ -1,0 +1,14 @@
+# Infinite Radio Default Configuration
+volume: 0.4
+active_style:
+  - "styles/upvoted/"
+abc: "vgm/"
+abc_order: "random"
+cot: "melody"
+abc_base_dir: "sheetsage/output"
+
+# Model Defaults
+ar_lora: "loras/ar_lora_inst_v3abc.safetensors"
+nar_lora: "loras/nar_lora_joint_v4.safetensors"
+ar_scale: 0.5
+nar_scale: 1.0

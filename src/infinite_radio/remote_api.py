@@ -41,16 +41,6 @@ def _format_short_path(raw_path: str | None, is_abc: bool = False) -> str | None
     return name
 
 
-def _persist_state(state_file: Path, shared_state: dict):
-    """Atomically writes the current shared_state to disk so Web UI changes survive restarts."""
-    try:
-        tmp_path = state_file.with_suffix(".tmp")
-        tmp_path.write_text(json.dumps(shared_state, indent=2), encoding="utf-8")
-        tmp_path.replace(state_file)
-    except Exception as e:
-        api_logger.warning(f"Failed to persist state to {state_file.name}: {e}")
-
-
 def _discover_styles(base_path: Path) -> Dict[str, list[str]]:
     """Scans styles/ for both directories containing JSONs and individual .json files."""
     styles_dir = base_path / "styles"
@@ -119,7 +109,6 @@ def create_remote_api(
     config_lock,
     playback_info: dict,
     base_path: Path,
-    state_file: Path,
     save_dir: Path,
 ):
     app = FastAPI(title="Infinite Radio Remote Control")
@@ -207,7 +196,6 @@ def create_remote_api(
             with options_cache_lock:
                 options_cache["data"] = None
 
-        _persist_state(state_file, snapshot)
         api_logger.info("⚙️ Generation settings updated via Web UI.")
         return {"status": "success", "config": snapshot}
 
@@ -252,8 +240,6 @@ def create_remote_api(
         clamped = max(0.0, min(1.0, level))
         with config_lock:
             shared_state["volume"] = clamped
-            snapshot = shared_state.copy()
-        _persist_state(state_file, snapshot)
         return {"status": "success", "volume": clamped}
 
     @app.post("/api/skip")
@@ -265,12 +251,10 @@ def create_remote_api(
     def toggle_pause(state: bool):
         with config_lock:
             shared_state["pause"] = state
-            snapshot = shared_state.copy()
         if state:
             pause_event.set()
         else:
             pause_event.clear()
-        _persist_state(state_file, snapshot)
         return {"status": "success", "paused": state}
 
     @app.post("/api/save")
