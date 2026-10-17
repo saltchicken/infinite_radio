@@ -11,8 +11,9 @@ sheetsage/**
 *.tsv
 *.mp3
 
+*.db
+
 *.jsonl
 
 *.safetensors
 
-fisher_recreation/
