@@ -1,0 +1,35 @@
+{
+  "id": "ethereal_solo_harp",
+  "choices": {
+    "bpm": [60, 70, 80, 90]
+  },
+  "style": "{bpm}, ethereal solo harp, celtic harp, classical harp, fantasy ambient, peaceful, relaxing, delicate fingerpicking, sweeping glissandos, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Delicate Plucked Intro]",
+      "[Flowing Arpeggios]",
+      "[Gentle Glissando]",
+      "[Soft Melodic Lead]",
+      "[Intricate Fingerpicking]",
+      "[Long Ringing Outro]"
+    ],
+    [
+      "[Slow Chord Intro]",
+      "[Pacing Harp Melody]",
+      "[Building Tempo]",
+      "[Cascading Notes]",
+      "[Peaceful Breakdown]",
+      "[Fade to Silence]"
+    ],
+    [
+      "[Sparse Harmonic Intro]",
+      "[Steady Rhythmic Plucking]",
+      "[High Register Melody]",
+      "[Sweeping Harp Run]",
+      "[Gentle Resolution]",
+      "[Quiet Ending]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 8472910
+}

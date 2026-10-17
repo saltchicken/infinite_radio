@@ -1,0 +1,35 @@
+{
+  "id": "canyon_echo_flute",
+  "choices": {
+    "bpm": [60, 65, 70]
+  },
+  "style": "{bpm}, native american flute, pan flute, canyon echoes, haunting, vast landscape, desert ambient, distant tribal percussion, deep resonance, cinematic, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Desert Wind Intro]",
+      "[Haunting Flute Melody]",
+      "[Distant Tom Drum Hit]",
+      "[Echoing Flute Call]",
+      "[Vast Ambient Breakdown]",
+      "[Long Fade Out]"
+    ],
+    [
+      "[Low Rumble Ambient Intro]",
+      "[Resonant Pan Flute]",
+      "[Rhythmic Shaker Entry]",
+      "[Soaring Flute Harmony]",
+      "[Quiet Resolution]",
+      "[Fade to Silence]"
+    ],
+    [
+      "[Sparse Acoustic Intro]",
+      "[Deep Flute Trills]",
+      "[Echoing Canyon Reverb]",
+      "[Cinematic Desert Swell]",
+      "[Gentle Outro]",
+      "[Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 55544433
+}

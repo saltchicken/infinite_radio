@@ -1,0 +1,35 @@
+{
+  "id": "snes_mystic_forest",
+  "choices": {
+    "bpm": [70, 80, 90]
+  },
+  "style": "{bpm}, 16-bit SNES soundfont, mystic forest ambient, retro RPG soundtrack, chiptune marimba, gentle square wave lead, nostalgic video game music, magical, spc700, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[16-bit Marimba Intro]",
+      "[Soft Ethereal Pad]",
+      "[Gentle Square Wave Melody]",
+      "[Chiptune Flute Harmony]",
+      "[Magical Breakdown]",
+      "[Long Ringing Outro]"
+    ],
+    [
+      "[Ambient Retro Wind]",
+      "[Plucked 16-bit Harp]",
+      "[Woodwind Synth Entry]",
+      "[Nostalgic Solo]",
+      "[Cinematic 16-bit Crescendo]",
+      "[Peaceful Outro]"
+    ],
+    [
+      "[Deep SPC700 Drone Intro]",
+      "[Light Digital Percussion]",
+      "[Retro Harp Arpeggios]",
+      "[Building Town Theme]",
+      "[Gentle Release]",
+      "[Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 1616162
+}

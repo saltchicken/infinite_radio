@@ -1,0 +1,35 @@
+{
+  "id": "ancient_bamboo_flute",
+  "choices": {
+    "bpm": [50, 60, 70]
+  },
+  "style": "{bpm}, ancient bamboo flute, shakuhachi, zen meditation, deep ambient, airy, breathy, spiritual, cinematic landscape, peaceful, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Wind and Chime Intro]",
+      "[Breathy Bamboo Flute Entry]",
+      "[Slow Resonant Swell]",
+      "[Vibrato Flute Solo]",
+      "[Meditative Breakdown]",
+      "[Long Fade Out]"
+    ],
+    [
+      "[Deep Drone Intro]",
+      "[Sparse Plucked Koto]",
+      "[Airy Flute Melody]",
+      "[Cinematic Atmosphere]",
+      "[Quiet Resolution]",
+      "[Fade to Silence]"
+    ],
+    [
+      "[Silence Intro]",
+      "[Solo Shakuhachi Trill]",
+      "[Distant Gong Hit]",
+      "[Sweeping Ambient Pad]",
+      "[Gentle Outro]",
+      "[Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 88877766
+}

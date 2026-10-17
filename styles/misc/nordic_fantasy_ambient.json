@@ -1,0 +1,35 @@
+{
+  "id": "nordic_fantasy_ambient",
+  "choices": {
+    "bpm": [60, 65, 70, 75]
+  },
+  "style": "{bpm}, fantasy ambient, orchestral soundscape, nordic folk, deep cellos, soft french horns, ethereal choir, cinematic, melancholic, snowy mountain exploration, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Cold Wind Ambient Intro]",
+      "[Slow Cello Melody]",
+      "[Soft Choral Swell]",
+      "[Distant French Horn]",
+      "[Ethereal String Breakdown]",
+      "[Long Fade Out]"
+    ],
+    [
+      "[Nature Soundscape Intro]",
+      "[Plucked Acoustic Harp]",
+      "[Lush String Section Entry]",
+      "[Melancholic Solo Violin]",
+      "[Cinematic Crescendo]",
+      "[Peaceful Outro]"
+    ],
+    [
+      "[Deep Drone Intro]",
+      "[Light Hand Percussion]",
+      "[Nordic Flute Solo]",
+      "[Building Orchestral Tension]",
+      "[Symphonic Release]",
+      "[Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 11112011
+}
