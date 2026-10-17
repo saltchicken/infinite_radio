@@ -12,3 +12,8 @@ ar_lora: "loras/ar_lora_inst_v3abc.safetensors"
 nar_lora: "loras/nar_lora_joint_v4.safetensors"
 ar_scale: 0.5
 nar_scale: 1.0
+
+# Postprocessing
+target_lufs: -12.0
+reverb_room_size: 0.5
+reverb_wet_level: 0.2

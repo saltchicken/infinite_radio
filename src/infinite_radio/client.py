@@ -31,6 +31,12 @@ EPHEMERAL_KEYS = (
     "nar_lora",
     "abc_base_dir",
     "abc_order",
+    "enable_postprocessing",
+    "reverb_room_size",
+    "reverb_damping",
+    "reverb_wet_level",
+    "reverb_dry_level",
+    "target_lufs",
 )
 
 

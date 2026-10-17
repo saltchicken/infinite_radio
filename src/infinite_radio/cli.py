@@ -15,6 +15,7 @@ import numpy as np
 import soundfile as sf
 import uvicorn
 import pyloudnorm as pyln
+from pedalboard import Pedalboard, Reverb
 
 from .utils.shuffle_utils import smart_choice
 from .player import audio_player
@@ -47,6 +48,13 @@ DEFAULT_STATE = {
     "abc_order": "random",  # Options: "random" or "sequential"
     "cot": "melody",
     "abc_base_dir": "sheetsage/output",
+    # DSP Settings
+    "enable_postprocessing": True,
+    "reverb_room_size": 0.3,
+    "reverb_damping": 0.5,
+    "reverb_wet_level": 0.15,
+    "reverb_dry_level": 0.85,
+    "target_lufs": -14.0,
 }
 
 # Refresh cached file lists every 5 minutes in case new files are added on disk
@@ -365,11 +373,30 @@ def main():
             if data.ndim == 1:
                 data = np.column_stack([data, data])
 
-            # Measure and normalize the perceived loudness to -14 LUFS
-            meter = pyln.Meter(fs)
-            current_loudness = meter.integrated_loudness(data)
-            # Cast back to float32 to prevent sounddevice dtype mismatch
-            data = pyln.normalize.loudness(data, current_loudness, -14.0).astype(np.float32)
+            if controller_req.get("enable_postprocessing", True):
+                # Extract DSP settings from the current configuration state
+                room_size = float(controller_req.get("reverb_room_size", 0.3))
+                damping = float(controller_req.get("reverb_damping", 0.5))
+                wet_level = float(controller_req.get("reverb_wet_level", 0.15))
+                dry_level = float(controller_req.get("reverb_dry_level", 0.85))
+                target_lufs = float(controller_req.get("target_lufs", -14.0))
+
+                # Apply a subtle "mastering" reverb
+                board = Pedalboard([
+                    Reverb(room_size=room_size, damping=damping, wet_level=wet_level, dry_level=dry_level)
+                ])
+                data = board(data.T, fs).T
+
+                # Measure and normalize the perceived loudness
+                meter = pyln.Meter(fs)
+                current_loudness = meter.integrated_loudness(data)
+                data = pyln.normalize.loudness(data, current_loudness, target_lufs)
+
+                # Prevent hard clipping from normalization gain
+                data = np.clip(data, -0.99, 0.99)
+            
+            # Make sure memory is strictly C-contiguous and float32 for sounddevice
+            data = np.ascontiguousarray(data, dtype=np.float32)
 
             play_queue.put((data, fs, metadata_to_save, zip_content, track_number))
             main_logger.info(f"Track {track_number} finished generating in {elapsed:.2f} seconds. Queued for next crossfade.")

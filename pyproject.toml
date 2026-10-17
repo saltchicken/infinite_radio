@@ -25,7 +25,8 @@ dependencies = [
     "uvicorn",
     "requests",
     "pydantic",
-    "pyloudnorm"
+    "pyloudnorm",
+    "pedalboard"
 ]
 
 [project.scripts]

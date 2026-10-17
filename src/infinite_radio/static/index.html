@@ -288,7 +288,46 @@
       </div>
     </div>
 
-    <div class="picker-row" style="margin-top: 8px;">
+    <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0 16px 0;">
+    <h2 style="font-size: 1.1rem; margin: 0 0 16px 0;">🎛️ DSP & Post-Processing</h2>
+
+    <div class="grid-2">
+      <div class="field">
+        <label>Enable Post-Processing</label>
+        <select id="enable-postprocessing">
+          <option value="true">✅ Enabled</option>
+          <option value="false">❌ Disabled</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Target LUFS (Volume)</label>
+        <input type="number" id="target-lufs" step="0.5" value="-14.0" />
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label>Reverb Room Size (0-1)</label>
+        <input type="number" id="reverb-room" step="0.05" min="0" max="1" value="0.3" />
+      </div>
+      <div class="field">
+        <label>Reverb Damping (0-1)</label>
+        <input type="number" id="reverb-damping" step="0.05" min="0" max="1" value="0.5" />
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label>Reverb Wet Level (0-1)</label>
+        <input type="number" id="reverb-wet" step="0.05" min="0" max="1" value="0.15" />
+      </div>
+      <div class="field">
+        <label>Reverb Dry Level (0-1)</label>
+        <input type="number" id="reverb-dry" step="0.05" min="0" max="1" value="0.85" />
+      </div>
+    </div>
+
+    <div class="picker-row" style="margin-top: 16px;">
       <button class="primary" style="flex: 2;" onclick="saveConfig()">💾 Apply Config</button>
       <button class="danger" style="flex: 1;" onclick="flushQueue()">🧹 Flush Queue</button>
     </div>
@@ -462,6 +501,14 @@
       document.getElementById("nar-lora-select").value = rawConfig.nar_lora || "";
       document.getElementById("ar-scale").value = rawConfig.ar_scale ?? 0.5;
       document.getElementById("nar-scale").value = rawConfig.nar_scale ?? 1.0;
+
+      // Map DSP and Post-Processing config state
+      document.getElementById("enable-postprocessing").value = rawConfig.enable_postprocessing !== false ? "true" : "false";
+      document.getElementById("target-lufs").value = rawConfig.target_lufs ?? -14.0;
+      document.getElementById("reverb-room").value = rawConfig.reverb_room_size ?? 0.3;
+      document.getElementById("reverb-damping").value = rawConfig.reverb_damping ?? 0.5;
+      document.getElementById("reverb-wet").value = rawConfig.reverb_wet_level ?? 0.15;
+      document.getElementById("reverb-dry").value = rawConfig.reverb_dry_level ?? 0.85;
     }
 
     async function saveConfig() {
@@ -476,6 +523,14 @@
         nar_lora: document.getElementById("nar-lora-select").value || null,
         ar_scale: parseFloat(document.getElementById("ar-scale").value),
         nar_scale: parseFloat(document.getElementById("nar-scale").value),
+
+        // Read DSP state out of the UI
+        enable_postprocessing: document.getElementById("enable-postprocessing").value === "true",
+        target_lufs: parseFloat(document.getElementById("target-lufs").value),
+        reverb_room_size: parseFloat(document.getElementById("reverb-room").value),
+        reverb_damping: parseFloat(document.getElementById("reverb-damping").value),
+        reverb_wet_level: parseFloat(document.getElementById("reverb-wet").value),
+        reverb_dry_level: parseFloat(document.getElementById("reverb-dry").value),
       };
 
       await fetch("/api/config", {
