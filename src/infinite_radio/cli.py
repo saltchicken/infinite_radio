@@ -106,6 +106,7 @@ def _resolve_abc_files(
     abc_reqs: list[str],
     abc_base_dir: str | None,
     cot_mode: str,
+    abc_order: str,
     base_dir: Path,
 ) -> list[Path]:
     """Scans the filesystem (or SQLite DB) for matching .abc notation files while preserving request order."""
@@ -147,7 +148,28 @@ def _resolve_abc_files(
             if cot_mode in ["full", "melody"]:
                 matched = sorted(abc_path.rglob(f"*-{cot_mode}.abc"))
             else:
-                matched = sorted(abc_path.rglob("*.abc"))
+                raw_matched = sorted(abc_path.rglob("*.abc"))
+                if abc_order == "sequential":
+                    # Group by base song name to prevent back-to-back repeats
+                    groups = {}
+                    for f in raw_matched:
+                        stem = f.stem
+                        base = stem[:-7] if stem.endswith("-melody") else (stem[:-5] if stem.endswith("-full") else stem)
+                        
+                        # Collapse SheetSage melody/full sibling folders to their shared parent
+                        parent = f.parent
+                        if parent.name in ("melody", "full"):
+                            parent = parent.parent
+                            
+                        key = (parent, base)
+                        if key not in groups:
+                            groups[key] = []
+                        groups[key].append(f)
+                    
+                    # Pick one random arrangement per song, preserving sequential order
+                    matched = [random.choice(group) for group in groups.values()]
+                else:
+                    matched = raw_matched
         elif abc_path.is_file():
             matched = [abc_path]
         else:
@@ -300,7 +322,7 @@ def main():
             active_request.update(controller_req)
 
             active_request["seed"] = active_request.get("seed", random.randint(0, 2**32 - 1))
-            cot_mode = active_request.get("cot", "full")
+            cot_mode = active_request.pop("cot", "full")
 
             # Extract the base directory and playback order for ABC files
             abc_base_dir = active_request.pop("abc_base_dir", None)
@@ -320,7 +342,7 @@ def main():
                 current_abc_key = (tuple(abc_reqs), str(abc_base_dir), str(cot_mode), str(abc_order))
                 now = time.monotonic()
                 if current_abc_key != abc_cache_key or (now - abc_cache_time) > CACHE_TTL_SECONDS:
-                    abc_cache_files = _resolve_abc_files(abc_reqs, abc_base_dir, cot_mode, base_dir)
+                    abc_cache_files = _resolve_abc_files(abc_reqs, abc_base_dir, cot_mode, abc_order, base_dir)
                     if current_abc_key != abc_cache_key:
                         abc_index = 0
                     abc_cache_key = current_abc_key

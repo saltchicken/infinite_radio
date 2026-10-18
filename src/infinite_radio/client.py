@@ -32,6 +32,7 @@ EPHEMERAL_KEYS = (
     "nar_lora",
     "abc_base_dir",
     "abc_order",
+    "cot",
     "strip_abc_tempo",
     "enable_bpm_modification",
     "bpm_source",
