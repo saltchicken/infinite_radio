@@ -282,6 +282,12 @@ def main():
                         main_logger.warning(f"Cached style file inaccessible ({e}). Invalidating style cache.")
                         style_cache_key = None
                         continue
+                    except json.JSONDecodeError as e:
+                        main_logger.error(f"Invalid JSON in style file {chosen_style.name} ({e}). Skipping.")
+                        # Remove the corrupted file from the active rotation so it isn't repeatedly selected
+                        if chosen_style in style_cache_files:
+                            style_cache_files.remove(chosen_style)
+                        continue
                 else:
                     main_logger.warning(f"No .json files found for active_style(s): {active_styles}")
 
