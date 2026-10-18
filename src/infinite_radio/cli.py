@@ -49,6 +49,7 @@ DEFAULT_STATE = {
     "abc_order": "random",  # Options: "random" or "sequential"
     "cot": "melody",
     "abc_base_dir": "sheetsage/output",
+    "strip_abc_tempo": False,
     # DSP Settings
     "enable_normalization": True,
     "enable_reverb": True,

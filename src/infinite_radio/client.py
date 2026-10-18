@@ -2,6 +2,7 @@ import argparse
 import io
 import json
 import logging
+import re
 import sys
 import threading
 import time
@@ -31,6 +32,7 @@ EPHEMERAL_KEYS = (
     "nar_lora",
     "abc_base_dir",
     "abc_order",
+    "strip_abc_tempo",
     "enable_normalization",
     "enable_reverb",
     "reverb_room_size",
@@ -57,6 +59,25 @@ def build_api_payload(
 
     if abc_override is not None:
         yue_kwargs["abc"] = abc_override
+
+    # --- CONDITIONAL ABC TEMPO TAG STRIPPING ---
+    strip_tempo = str(yue_kwargs.get("strip_abc_tempo", False)).lower() == "true"
+
+    if strip_tempo and "abc" in yue_kwargs and isinstance(yue_kwargs["abc"], str):
+        original_abc = yue_kwargs["abc"]
+        
+        # Remove full-line Q: tags (e.g., "Q: 1/4=120" or "Q:120")
+        abc_str = re.sub(r'^Q:.*$\n?', '', original_abc, flags=re.MULTILINE)
+        # Remove inline Q: tags (e.g., "[Q: 120]")
+        abc_str = re.sub(r'\[Q:[^\]]*\]', '', abc_str)
+        
+        if abc_str != original_abc:
+            client_logger.info("Tempo tags (Q:) detected and stripped from the ABC file.")
+        else:
+            client_logger.info("No tempo tags (Q:) found in the ABC file.")
+            
+        yue_kwargs["abc"] = abc_str
+    # -------------------------------------------
 
     ar_lora = yue_kwargs.pop("ar_lora", None) or default_ar_lora
     nar_lora = yue_kwargs.pop("nar_lora", None) or default_nar_lora

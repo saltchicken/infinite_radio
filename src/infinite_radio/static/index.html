@@ -274,9 +274,18 @@
         </div>
       </div>
 
-      <div class="field">
-        <label>ABC Base Directory</label>
-        <input type="text" id="abc-base-dir" value="sheetsage/output" />
+      <div class="grid-2">
+        <div class="field">
+          <label>ABC Base Directory</label>
+          <input type="text" id="abc-base-dir" value="sheetsage/output" />
+        </div>
+        <div class="field">
+          <label>Strip ABC Tempo (Q: tags)</label>
+          <select id="strip-abc-tempo">
+            <option value="true">✅ Enabled</option>
+            <option value="false">❌ Disabled</option>
+          </select>
+        </div>
       </div>
 
       <div class="grid-2">
@@ -504,6 +513,7 @@
       document.getElementById("cot-select").value = rawConfig.cot || "melody";
       document.getElementById("abc-order-select").value = rawConfig.abc_order || "random";
       document.getElementById("abc-base-dir").value = rawConfig.abc_base_dir || "sheetsage/output";
+      document.getElementById("strip-abc-tempo").value = rawConfig.strip_abc_tempo ? "true" : "false";
       document.getElementById("ar-lora-select").value = rawConfig.ar_lora || "";
       document.getElementById("nar-lora-select").value = rawConfig.nar_lora || "";
       document.getElementById("ar-scale").value = rawConfig.ar_scale ?? 0.5;
@@ -527,6 +537,7 @@
         cot: document.getElementById("cot-select").value,
         abc_order: document.getElementById("abc-order-select").value,
         abc_base_dir: document.getElementById("abc-base-dir").value.trim(),
+        strip_abc_tempo: document.getElementById("strip-abc-tempo").value === "true",
         ar_lora: document.getElementById("ar-lora-select").value || null,
         nar_lora: document.getElementById("nar-lora-select").value || null,
         ar_scale: parseFloat(document.getElementById("ar-scale").value),
