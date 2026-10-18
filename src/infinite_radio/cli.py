@@ -10,6 +10,7 @@ import queue
 import time
 import logging
 import sqlite3
+import re
 from pathlib import Path
 
 import requests
@@ -50,6 +51,7 @@ DEFAULT_STATE = {
     "cot": "melody",
     "abc_base_dir": "sheetsage/output",
     "strip_abc_tempo": False,
+    "bpm_override": None,
     # DSP Settings
     "enable_normalization": True,
     "enable_reverb": True,
@@ -306,12 +308,27 @@ def main():
                 chosen = random.choice(active_request["lyrics"])
                 active_request["lyrics"] = "\n".join(chosen) if isinstance(chosen, list) else chosen
 
+            bpm_override = active_request.get("bpm_override")
             if "choices" in active_request:
                 choices = active_request.pop("choices")
                 if isinstance(active_request.get("style"), str):
                     for key, options in choices.items():
-                        chosen_val = str(random.choice(options))
+                        if key == "bpm" and bpm_override:
+                            chosen_val = str(bpm_override)
+                        else:
+                            chosen_val = str(random.choice(options))
                         active_request["style"] = active_request["style"].replace(f"{{{key}}}", chosen_val)
+
+            # Ensure the prompt explicitly reflects the BPM Override if it missed the {bpm} substitution
+            if bpm_override and isinstance(active_request.get("style"), str):
+                style_str = active_request["style"]
+                if re.match(r'^\d{2,3}\b', style_str):
+                    # ADDED " bpm" to the replacement string below
+                    style_str = re.sub(r'^\d{2,3}\b(?:\s*bpm)?\s*,?\s*', f"{bpm_override} bpm, ", style_str, flags=re.IGNORECASE)
+                elif str(bpm_override) not in style_str:
+                    # ADDED " bpm" to the fallback string below
+                    style_str = f"{bpm_override} bpm, {style_str}"
+                active_request["style"] = style_str
 
             if "abc" in active_request and active_request["abc"]:
                 abc_reqs = active_request["abc"]

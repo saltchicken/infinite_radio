@@ -288,6 +288,11 @@
         </div>
       </div>
 
+      <div class="field">
+        <label>BPM Override (Empty = Auto)</label>
+        <input type="number" id="bpm-override" placeholder="e.g. 120" min="1" max="999" />
+      </div>
+
       <div class="grid-2">
         <div class="field">
           <label>AR LoRA</label>
@@ -514,6 +519,7 @@
       document.getElementById("abc-order-select").value = rawConfig.abc_order || "random";
       document.getElementById("abc-base-dir").value = rawConfig.abc_base_dir || "sheetsage/output";
       document.getElementById("strip-abc-tempo").value = rawConfig.strip_abc_tempo ? "true" : "false";
+      document.getElementById("bpm-override").value = rawConfig.bpm_override || "";
       document.getElementById("ar-lora-select").value = rawConfig.ar_lora || "";
       document.getElementById("nar-lora-select").value = rawConfig.nar_lora || "";
       document.getElementById("ar-scale").value = rawConfig.ar_scale ?? 0.5;
@@ -530,6 +536,8 @@
     }
 
     async function saveConfig() {
+      const bpmVal = document.getElementById("bpm-override").value;
+
       const updated = {
         ...rawConfig,
         active_style: activeStyles,
@@ -538,6 +546,7 @@
         abc_order: document.getElementById("abc-order-select").value,
         abc_base_dir: document.getElementById("abc-base-dir").value.trim(),
         strip_abc_tempo: document.getElementById("strip-abc-tempo").value === "true",
+        bpm_override: bpmVal ? parseInt(bpmVal, 10) : null,
         ar_lora: document.getElementById("ar-lora-select").value || null,
         nar_lora: document.getElementById("nar-lora-select").value || null,
         ar_scale: parseFloat(document.getElementById("ar-scale").value),

@@ -9,6 +9,7 @@ abc_base_dir: "sheetsage/output"
 abc: "vgm/"
 
 strip_abc_tempo: true
+bpm_override:
 
 # --- LoRA Defaults ---
 ar_scale: 0.5
