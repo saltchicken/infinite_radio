@@ -1,0 +1,35 @@
+{
+  "id": "bioluminescent_fairy_glade",
+  "choices": {
+    "bpm": [70, 80, 90]
+  },
+  "style": "{bpm}, bioluminescent glade, fairy dust, glockenspiel, pizzicato strings, light magical woodwinds, fluttering, enchanted forest, ethereal, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Fluttering Glockenspiel Intro]",
+      "[Light Pizzicato Strings]",
+      "[Gentle Woodwind Trill]",
+      "[Dancing Magical Melody]",
+      "[Soft Glowing Breakdown]",
+      "[Ringing Outro]"
+    ],
+    [
+      "[Quiet Forest Ambient]",
+      "[Plucked String Arpeggio]",
+      "[Sparkling Chime Entry]",
+      "[Playful Fairy Solo]",
+      "[Warm Magical Swell]",
+      "[Fade to Silence]"
+    ],
+    [
+      "[Sparse Bell Intro]",
+      "[Rapid Fluttering Notes]",
+      "[Lush Ethereal Strings]",
+      "[Harmonious Woodwind Run]",
+      "[Peaceful Outro]",
+      "[Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 22446688
+}

@@ -1,0 +1,35 @@
+{
+  "id": "sunken_mermaid_grotto",
+  "choices": {
+    "bpm": [55, 65, 75]
+  },
+  "style": "{bpm}, sunken mermaid grotto, aquatic ambient, gentle water ripples, delayed clean guitar, muted harp, deep ocean reverb, ethereal, peaceful underwater, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Submerged Ambient Intro]",
+      "[Echoing Plucked Harp]",
+      "[Delayed Guitar Swell]",
+      "[Flowing Underwater Melody]",
+      "[Deep Resonant Breakdown]",
+      "[Slow Fade Out]"
+    ],
+    [
+      "[Gentle Bubble Textures]",
+      "[Soft Aquatic Pad]",
+      "[Rhythmic Muted Plucks]",
+      "[Sweeping Oceanic Harmony]",
+      "[Tranquil Resolution]",
+      "[Fade to Silence]"
+    ],
+    [
+      "[Sparse Fluid Intro]",
+      "[Drifting Guitar Chords]",
+      "[High Reverb Harmonics]",
+      "[Enchanting Sea Swell]",
+      "[Gentle Outro]",
+      "[Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 99887766
+}

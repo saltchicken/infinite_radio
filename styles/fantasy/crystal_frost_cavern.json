@@ -1,0 +1,35 @@
+{
+  "id": "crystal_frost_cavern",
+  "choices": {
+    "bpm": [45, 55, 65]
+  },
+  "style": "{bpm}, crystal frost cavern, icy reverb, glassy synthesizers, delicate vibraphone, cold ambient, winter magic, frozen, ethereal, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Cold Wind Ambient Intro]",
+      "[Glassy Synth Notes]",
+      "[Delicate Vibraphone Melody]",
+      "[Icy Reverb Swell]",
+      "[Frozen Breakdown]",
+      "[Long Lingering Outro]"
+    ],
+    [
+      "[Hollow Cavern Drone]",
+      "[Sparse Crystal Tones]",
+      "[Slow Chiming Progression]",
+      "[Sweeping Winter Pad]",
+      "[Still Resolution]",
+      "[Fade to Silence]"
+    ],
+    [
+      "[Soft Shimmering Intro]",
+      "[Echoing Ice Drops]",
+      "[Deep Ambient Freeze]",
+      "[Ethereal Glass Melody]",
+      "[Gentle Outro]",
+      "[Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 55779911
+}

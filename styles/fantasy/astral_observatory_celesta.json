@@ -1,0 +1,35 @@
+{
+  "id": "astral_observatory_celesta",
+  "choices": {
+    "bpm": [50, 60, 70]
+  },
+  "style": "{bpm}, astral observatory, celesta, slow sweeping pads, cosmic ambient, starlight, twinkling, deep space, magical fantasy, peaceful, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Soft Sweeping Pad Intro]",
+      "[Twinkling Celesta Notes]",
+      "[Deep Cosmic Drone]",
+      "[Slow Melodic Arpeggio]",
+      "[Floating Ambient Breakdown]",
+      "[Long Fading Outro]"
+    ],
+    [
+      "[Quiet Stardust Sparkles]",
+      "[Gentle Chime Swell]",
+      "[Echoing Celesta Melody]",
+      "[Expansive Space Harmony]",
+      "[Weightless Resolution]",
+      "[Fade to Silence]"
+    ],
+    [
+      "[Deep Void Intro]",
+      "[Sparse High Notes]",
+      "[Warm Ethereal Chord Progression]",
+      "[Cascading Starfall]",
+      "[Peaceful Outro]",
+      "[Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 33445566
+}
