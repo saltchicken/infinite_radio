@@ -1,0 +1,35 @@
+{
+  "id": "dungeon_synth",
+  "choices": {
+    "bpm": [65, 70, 75, 80]
+  },
+  "style": "{bpm} bpm, dungeon synth, lo-fi medieval synthesizer, nostalgic dark fantasy, tape hiss, vintage digital synth, primitive polyphonic pads, echo cathedral reverb, stone dungeon atmosphere, gothic organ, harpsichord arpeggio, ancient flute melody, haunting drone, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Tape Hiss Intro]",
+      "[Cryptic Organ Drone]",
+      "[Horns of the Keep]",
+      "[Echoing Flute Motif]",
+      "[Solemn Dungeon Procession]",
+      "[Fading Reverb]"
+    ],
+    [
+      "[Dungeon Cave Ambiance]",
+      "[Harpsichord Arpeggio]",
+      "[Low Vintage Synth Pad]",
+      "[Haunting Medieval Melody]",
+      "[Mystic Climax]",
+      "[Slow Tape Decay Outro]"
+    ],
+    [
+      "[Distant Chimes Intro]",
+      "[Slow Melodic Lead]",
+      "[Layered Cathedral Pads]",
+      "[Pensive Fantasy Breakdown]",
+      "[Solemn March Finale]",
+      "[Silent Fade]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 13928471
+}
