@@ -60,21 +60,33 @@ def build_api_payload(
     if abc_override is not None:
         yue_kwargs["abc"] = abc_override
 
-    # --- CONDITIONAL ABC TEMPO TAG STRIPPING ---
+    # --- CONDITIONAL ABC TEMPO TAG REPLACEMENT ---
     strip_tempo = str(yue_kwargs.get("strip_abc_tempo", False)).lower() == "true"
 
     if strip_tempo and "abc" in yue_kwargs and isinstance(yue_kwargs["abc"], str):
         original_abc = yue_kwargs["abc"]
         
-        # Remove full-line Q: tags (e.g., "Q: 1/4=120" or "Q:120")
-        abc_str = re.sub(r'^Q:.*$\n?', '', original_abc, flags=re.MULTILINE)
-        # Remove inline Q: tags (e.g., "[Q: 120]")
-        abc_str = re.sub(r'\[Q:[^\]]*\]', '', abc_str)
+        prompt_text = str(yue_kwargs.get("prompt", yue_kwargs.get("style", ""))).strip()
+        # Try to find BPM at the start of the prompt, or explicitly labeled as 'bpm'
+        bpm_match = re.search(r'^(\d{2,3})\b', prompt_text) or re.search(r'\b(\d{2,3})\s*bpm\b', prompt_text, re.IGNORECASE)
         
-        if abc_str != original_abc:
-            client_logger.info("Tempo tags (Q:) detected and stripped from the ABC file.")
+        if bpm_match:
+            target_bpm = bpm_match.group(1)
+            
+            # Replace full-line Q: tags (e.g., "Q: 1/4=120" -> "Q: 1/4={target_bpm}")
+            abc_str = re.sub(r'(^Q:[^=\n]*=?\s*)\d+', rf'\g<1>{target_bpm}', original_abc, flags=re.MULTILINE)
+            # Replace inline Q: tags (e.g., "[Q: 120]" -> "[Q: {target_bpm}]")
+            abc_str = re.sub(r'(\[Q:[^=\]]*=?\s*)\d+', rf'\g<1>{target_bpm}', abc_str)
+            
+            if abc_str != original_abc:
+                client_logger.info(f"Tempo tags (Q:) replaced with {target_bpm} BPM to match prompt.")
+            else:
+                client_logger.info("No tempo tags (Q:) found in the ABC file.")
         else:
-            client_logger.info("No tempo tags (Q:) found in the ABC file.")
+            # Fallback to stripping if we can't determine the target BPM
+            abc_str = re.sub(r'^Q:.*$\n?', '', original_abc, flags=re.MULTILINE)
+            abc_str = re.sub(r'\[Q:[^\]]*\]', '', abc_str)
+            client_logger.info("Tempo tags (Q:) stripped (could not detect target BPM in prompt).")
             
         yue_kwargs["abc"] = abc_str
     # -------------------------------------------

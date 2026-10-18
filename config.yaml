@@ -8,7 +8,7 @@ cot: "melody"
 abc_base_dir: "sheetsage/output"
 abc: "vgm/"
 
-strip_abc_tempo: false
+strip_abc_tempo: true
 
 # --- LoRA Defaults ---
 ar_scale: 0.5
