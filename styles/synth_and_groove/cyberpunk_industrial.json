@@ -3,7 +3,7 @@
   "choices": {
     "bpm": [95, 100, 105, 110]
   },
-  "style": "{bpm}, cyberpunk industrial, dark synth, heavy distortion, mechanical percussion, dystopian sci-fi, aggressive bass, underground club, purely instrumental, zero vocals.",
+  "style": "{bpm} bpm, cyberpunk industrial, dark synth, heavy distortion, mechanical percussion, dystopian sci-fi, aggressive bass, underground club, purely instrumental, zero vocals.",
   "lyrics": [
     [
       "[Mechanical Intro]",

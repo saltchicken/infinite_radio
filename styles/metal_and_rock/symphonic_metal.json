@@ -3,7 +3,7 @@
   "choices": {
     "bpm": [140, 150, 160, 170]
   },
-  "style": "{bpm}, symphonic metal, heavy metal, epic orchestral, aggressive distorted electric guitars, massive brass, soaring choir, double bass drum blast beats, dramatic build-up, dark, heroic, cinematic, purely instrumental, zero vocals.",
+  "style": "{bpm} bpm, symphonic metal, heavy metal, epic orchestral, aggressive distorted electric guitars, massive brass, soaring choir, double bass drum blast beats, dramatic build-up, dark, heroic, cinematic, purely instrumental, zero vocals.",
   "lyrics": [
     [
       "[Ominous Choir Intro]",

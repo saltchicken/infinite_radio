@@ -3,7 +3,7 @@
   "choices": {
     "bpm": [130, 140, 150]
   },
-  "style": "{bpm}, djent, progressive metal, heavily syncopated low-tuned guitars, complex polyrhythms, aggressive bass, ambient guitar leads, intense, modern metal, purely instrumental, zero vocals.",
+  "style": "{bpm} bpm, djent, progressive metal, heavily syncopated low-tuned guitars, complex polyrhythms, aggressive bass, ambient guitar leads, intense, modern metal, purely instrumental, zero vocals.",
   "lyrics": [
     [
       "[Ambient Clean Guitar Intro]",

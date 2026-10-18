@@ -3,7 +3,7 @@
   "choices": {
     "bpm": [130, 150, 170, 190]
   },
-  "style": "{bpm}, heavy metal, thrash metal, aggressive distorted electric guitars, palm-muted chugging, double bass drum blast beats, heavy driving bassline, shredding guitar solo, dark, intense, mosh pit, purely instrumental, zero vocals.",
+  "style": "{bpm} bpm, heavy metal, thrash metal, aggressive distorted electric guitars, palm-muted chugging, double bass drum blast beats, heavy driving bassline, shredding guitar solo, dark, intense, mosh pit, purely instrumental, zero vocals.",
   "lyrics": [
     [
       "[Distorted Guitar Intro]",

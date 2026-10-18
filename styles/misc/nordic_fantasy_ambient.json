@@ -3,7 +3,7 @@
   "choices": {
     "bpm": [60, 65, 70, 75]
   },
-  "style": "{bpm}, fantasy ambient, orchestral soundscape, nordic folk, deep cellos, soft french horns, ethereal choir, cinematic, melancholic, snowy mountain exploration, purely instrumental, zero vocals.",
+  "style": "{bpm} bpm, fantasy ambient, orchestral soundscape, nordic folk, deep cellos, soft french horns, ethereal choir, cinematic, melancholic, snowy mountain exploration, purely instrumental, zero vocals.",
   "lyrics": [
     [
       "[Cold Wind Ambient Intro]",

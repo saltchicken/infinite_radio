@@ -3,7 +3,7 @@
   "choices": {
     "bpm": [115, 120, 125, 130]
   },
-  "style": "{bpm}, synthwave, outrun, retrowave, 80s nostalgia, analog synthesizers, driving bassline, gated reverb snare, neon lights, night drive, electronic, purely instrumental, zero vocals.",
+  "style": "{bpm} bpm, synthwave, outrun, retrowave, 80s nostalgia, analog synthesizers, driving bassline, gated reverb snare, neon lights, night drive, electronic, purely instrumental, zero vocals.",
   "lyrics": [
     [
       "[Analog Intro]",
