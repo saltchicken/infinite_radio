@@ -1,0 +1,41 @@
+{
+  "id": "mitsuda_music_box_nocturne",
+  "choices": {
+    "bpm": [56, 62, 68, 74],
+    "lead": [
+      "delicate antique music box and warm felt piano",
+      "twinkling celesta and breathy alto flute",
+      "gentle acoustic harp and solo melancholic violin"
+    ]
+  },
+  "style": "{bpm}, Yasunori Mitsuda lullaby style, emotional JRPG memory theme, {lead}, soft fingerpicked acoustic guitar, warm upright bass notes, intimate chamber strings, bittersweet nostalgia, starlight night town, innocent, tearful, peaceful, warm close-mic acoustic space, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Winding Music Box Intro]",
+      "[Fragile Twinkling Melody]",
+      "[Warm Felt Piano Accompaniment]",
+      "[Lush Chamber Strings Embrace]",
+      "[Bittersweet Solo Violin Lead]",
+      "[Slowing Music Box Tempo]",
+      "[Silence]"
+    ],
+    [
+      "[Soft Fingerpicked Guitar Intro]",
+      "[Gentle Piano and Celesta Duet]",
+      "[Breathy Flute Countermelody]",
+      "[Emotional String Quartet Swell]",
+      "[Intimate Piano Breakdown]",
+      "[Peaceful Starlight Outro]"
+    ],
+    [
+      "[Sparse Harp Harmonics Intro]",
+      "[Nostalgic Piano Theme Entry]",
+      "[Warm Cello Undercurrent]",
+      "[Hopeful Key Change Crescendo]",
+      "[Delicate Music Box Echo]",
+      "[Long Fading Resolution]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19992017
+}

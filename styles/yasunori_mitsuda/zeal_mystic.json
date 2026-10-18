@@ -1,0 +1,43 @@
+{
+  "id": "mitsuda_zeal_mystic_synth",
+  "choices": {
+    "bpm": [82, 86, 90, 95],
+    "lead": [
+      "crystalline sitar-like synth pluck and airy pan flute",
+      "hypnotic electric piano arpeggios and retro oboe lead",
+      "shimmering bell synth and melancholic flute melody"
+    ]
+  },
+  "style": "{bpm}, Yasunori Mitsuda style, Chrono Trigger aesthetic, 16-bit SNES SPC700 soundfont fusion, {lead}, rolling hypnotic bassline, crisp electronic hand percussion, tabla and hi-hat groove, floating sky kingdom, ancient magical civilization, mysterious, hypnotic, nostalgic 90s JRPG, lush digital reverb, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Shimmering Bell Arpeggio Intro]",
+      "[Hypnotic Bass and Tabla Groove Entry]",
+      "[Airy Flute Main Theme]",
+      "[Soaring String Pad Countermelody]",
+      "[Mystical Synth Breakdown]",
+      "[Full Melodic Return]",
+      "[Echoing Delay Fade Out]"
+    ],
+    [
+      "[Deep Floating Pad Intro]",
+      "[Rhythmic Plucked Synth Ostinato]",
+      "[Light Syncopated Percussion Build]",
+      "[Wistful Oboe and Flute Harmony]",
+      "[Dreamy Chord Modulation Bridge]",
+      "[Nostalgic Climax]",
+      "[Long Ringing Outro]"
+    ],
+    [
+      "[Sparse Crystal Chime Intro]",
+      "[Steady Rolling Bassline]",
+      "[Enchanting Sitar-Synth Melody]",
+      "[Layered Retro Strings Swell]",
+      "[Quiet Meditative Interlude]",
+      "[Final Shimmering Resolution]",
+      "[Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 12000995
+}

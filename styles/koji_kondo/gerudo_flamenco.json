@@ -1,0 +1,41 @@
+{
+  "id": "kondo_gerudo_flamenco",
+  "choices": {
+    "bpm": [116, 122, 128, 134],
+    "lead": [
+      "virtuosic Spanish nylon guitar and passionate solo violin",
+      "jaunty accordion and bright brass trumpet",
+      "percussive acoustic guitar strumming and soaring woodwinds"
+    ]
+  },
+  "style": "{bpm}, Koji Kondo acoustic folk style, Gerudo Valley and Song of Storms aesthetic, {lead}, driving rhythmic handclaps and cajon, bouncy upright acoustic bass, Andalusian flamenco progression, adventurous desert canyon, swirling windmill waltz, energetic, catchy, crisp acoustic studio mix, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Rapid Flamenco Nylon Guitar Strum Intro]",
+      "[Rhythmic Handclaps and Acoustic Bass Entry]",
+      "[Passionate Guitar and Trumpet Main Melody]",
+      "[Soaring Violin Countermelody]",
+      "[Percussive Guitar Tap and Cajon Breakdown]",
+      "[High-Energy Desert Dance Climax]",
+      "[Crisp Flamenco Flourish End]"
+    ],
+    [
+      "[Barrel Organ and Accordion Waltz Intro]",
+      "[Upbeat Tambourine and Upright Bass Groove]",
+      "[Catchy Whirling Windmill Melody]",
+      "[Dramatic Strings and Guitar Bridge]",
+      "[Accelerating Folk Ensemble Climax]",
+      "[Sudden Acoustic Stomp Outro]"
+    ],
+    [
+      "[Solo Nylon Guitar Arpeggio Intro]",
+      "[Syncopated Castanets and Hand Percussion]",
+      "[Heroic Desert Brass and Guitar Duet]",
+      "[Tension Building Acoustic Breakdown]",
+      "[Triumphant Full Ensemble Return]",
+      "[Ringing Final Chord]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19981211
+}

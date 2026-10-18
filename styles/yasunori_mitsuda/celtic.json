@@ -1,0 +1,43 @@
+{
+  "id": "yasunori_mitsuda_celtic_rpg",
+  "choices": {
+    "bpm": [68, 76, 84, 92],
+    "lead": [
+      "expressive tin whistle and solo violin",
+      "melancholic oboe and celtic harp",
+      "breathy wooden flute and solo cello"
+    ]
+  },
+  "style": "{bpm}, Yasunori Mitsuda style, 90s JRPG soundtrack, Chrono Cross and Xenogears aesthetic, {lead}, nylon string acoustic guitar arpeggios, fretless bass, light hand percussion, udu drum and tambourine, Celtic world fusion, nostalgic, wistful, oceanic breeze, timeless fantasy adventure, warm chamber reverb, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Clockwork Chime and Nylon Guitar Intro]",
+      "[Wistful Tin Whistle Melody Entry]",
+      "[Fretless Bass and Light Hand Percussion]",
+      "[Soaring Solo Violin Countermelody]",
+      "[Cinematic Chamber Strings Swell]",
+      "[Delicate Acoustic Breakdown]",
+      "[Ringing Harp Fade Out]"
+    ],
+    [
+      "[Gentle Ocean Wave Pad Intro]",
+      "[Fingerpicked 12-String Acoustic Guitar]",
+      "[Melancholic Oboe Solo]",
+      "[Syncopated World Percussion Groove]",
+      "[Lush Orchestral Strings Climax]",
+      "[Nostalgic Piano and Flute Duet]",
+      "[Quiet Resolution]"
+    ],
+    [
+      "[Sparse Celtic Harp Arpeggio Intro]",
+      "[Breathy Wooden Flute Lead]",
+      "[Warm Fretless Bass Line]",
+      "[Emotional Cello and Violin Harmony]",
+      "[Rhythmic Tambourine and Bodhran Build]",
+      "[Sweeping Fantasy Horizon Theme]",
+      "[Long Lingering Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19951999
+}

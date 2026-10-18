@@ -1,0 +1,41 @@
+{
+  "id": "kondo_ocarina_woods",
+  "choices": {
+    "bpm": [72, 80, 88, 96],
+    "lead": [
+      "warm clay ocarina and cascading concert harp",
+      "playful wooden marimba and breathy pan flute",
+      "expressive solo recorder and lush chamber strings"
+    ]
+  },
+  "style": "{bpm}, Koji Kondo style, Legend of Zelda Ocarina of Time aesthetic, {lead}, pizzicato string accompaniment, light triangle and woodblock percussion, enchanted forest waltz, fairy fountain arpeggios, whimsical, nostalgic, magical sacred grove, warm natural reverb, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Cascading Fairy Harp Arpeggio Intro]",
+      "[Warm Clay Ocarina Melody Entry]",
+      "[Light Pizzicato Strings and Woodblock]",
+      "[Soaring Chamber Violin Harmony]",
+      "[Delicate Music Box and Harp Breakdown]",
+      "[Full Enchanted Forest Swell]",
+      "[Ringing Harp Glissando Outro]"
+    ],
+    [
+      "[Playful Marimba and Pizzicato Intro]",
+      "[Bouncy Wooden Flute Main Theme]",
+      "[Gentle Tambourine and Shaker Groove]",
+      "[Mysterious Minor-Key Woods Bridge]",
+      "[Joyful Ocarina and String Return]",
+      "[Echoing Forest Fade Out]"
+    ],
+    [
+      "[Solo Ocarina Call Intro]",
+      "[Flowing Four-Octave Harp Accompaniment]",
+      "[Warm French Horn Countermelody]",
+      "[Peaceful Sanctuary Breakdown]",
+      "[Luminous Orchestral Crescendo]",
+      "[Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19981121
+}

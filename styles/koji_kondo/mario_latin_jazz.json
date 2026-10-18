@@ -1,0 +1,42 @@
+{
+  "id": "kondo_mario_latin_jazz",
+  "choices": {
+    "bpm": [120, 128, 136, 144],
+    "lead": [
+      "bright Caribbean steel drums and bouncy ragtime tack piano",
+      "punchy big band brass section and playful xylophone",
+      "funky clavinet synth and upbeat jazz saxophone"
+    ]
+  },
+  "style": "{bpm}, Koji Kondo platformer style, Super Mario World and Sunshine aesthetic, upbeat Latin jazz and ragtime fusion, {lead}, walking slap bassline, crisp samba percussion with agogo bells and congas, syncopated jazz drum kit, cheerful, sunny tropical island, playful, infectious groove, tight punchy mix, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Iconic Syncopated Drum and Bass Intro]",
+      "[Bright Steel Drum and Piano Main Theme]",
+      "[Walking Bass and Latin Percussion Groove]",
+      "[Punchy Brass Section Call and Response]",
+      "[Playful Xylophone and Bongos Breakdown]",
+      "[High-Energy Big Band Jazz Climax]",
+      "[Jaunty Ragtime Cadence End]"
+    ],
+    [
+      "[Bouncy Ragtime Piano Intro]",
+      "[Crisp Hi-Hat and Walking Upright Bass]",
+      "[Cheerful Marimba and Trumpet Melody]",
+      "[Syncopated Funky Clavinet Bridge]",
+      "[Virtuosic Jazz Piano Solo]",
+      "[Joyful Full Ensemble Finale]",
+      "[Sudden Stop]"
+    ],
+    [
+      "[Agogo Bell and Conga Rhythm Intro]",
+      "[Sunny Acoustic Guitar and Steel Pan Entry]",
+      "[Upbeat Brass Stabs and Slap Bass]",
+      "[Minimal Percussion and Bass Breakdown]",
+      "[Key-Change Carnival Climax]",
+      "[Playful Whistle and Bell Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19901121
+}

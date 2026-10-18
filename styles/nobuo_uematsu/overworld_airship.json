@@ -1,0 +1,42 @@
+{
+  "id": "uematsu_overworld_airship",
+  "choices": {
+    "bpm": [108, 116, 124, 132],
+    "lead": [
+      "heroic French horns and soaring symphonic strings",
+      "triumphant trumpet fanfare and majestic woodwind ensemble",
+      "melancholic solo horn and sweeping cinematic violins"
+    ]
+  },
+  "style": "{bpm}, Nobuo Uematsu overworld style, Final Fantasy airship and world map aesthetic, {lead}, crisp marching snare drum, rolling timpani and orchestral cymbals, walking contrabass, grand symphonic adventure, bittersweet heroism, vast fantasy horizon, clouds and sky exploration, rich orchestral hall acoustics, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Rolling Timpani and Marching Snare Intro]",
+      "[Solemn French Horn Horizon Melody]",
+      "[Sweeping Symphonic Strings Entry]",
+      "[Triumphant Brass Fanfare Takeover]",
+      "[Wistful Woodwind and Harp Interlude]",
+      "[Grand Full Orchestra Airship Climax]",
+      "[Resonant Symphonic Finale]"
+    ],
+    [
+      "[Mysterious Pizzicato String Intro]",
+      "[Building Snare Drum March]",
+      "[Soaring Violin World Map Theme]",
+      "[Heroic Trumpet Countermelody]",
+      "[Dramatic Minor-Key Bridge]",
+      "[Euphoric Key-Change Return]",
+      "[Long Orchestral Fade Out]"
+    ],
+    [
+      "[Propeller Wind and Brass Swell Intro]",
+      "[Upbeat Adventurous Rhythm Entry]",
+      "[Bright Flute and Violin Lead]",
+      "[Booming Timpani and Horn Breakdown]",
+      "[Cinematic Skyward Crescendo]",
+      "[Triumphant Cymbal Crash Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19910719
+}

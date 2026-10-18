@@ -1,0 +1,42 @@
+{
+  "id": "kondo_aquatic_epiano",
+  "choices": {
+    "bpm": [64, 70, 76, 82],
+    "lead": [
+      "dreamy DX7 FM electric piano and warm fretless bass",
+      "crystalline bell synth arpeggios and breathy alto flute",
+      "chorused clean electric guitar and lush string pads"
+    ]
+  },
+  "style": "{bpm}, Koji Kondo aquatic ambient style, Super Mario 64 Dire Dire Docks and Zora's Domain aesthetic, {lead}, cascading shimmering synth pads, gentle brush snare and soft ride cymbal, serene underwater coral reef, weightless floating nostalgia, peaceful, soothing, 90s Nintendo 64 soundtrack warmth, deep lush reverb, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Shimmering FM Electric Piano Arpeggio Intro]",
+      "[Warm Fretless Bass Countermelody]",
+      "[Lush Floating String Pad Swell]",
+      "[Gentle Brush Drum and Ride Cymbal Entry]",
+      "[Soaring Nostalgic Flute and Synth Bridge]",
+      "[Full Serene Drum and Piano Groove]",
+      "[Long Weightless Fade Out]"
+    ],
+    [
+      "[Sparkling Crystal Bell Intro]",
+      "[Liquid Chorused Electric Piano Chords]",
+      "[Deep Sub-Aquatic Bass Notes]",
+      "[Peaceful Solo Alto Flute Melody]",
+      "[Dreamy Suspended Harmony Breakdown]",
+      "[Warm Nostalgic Resolution]",
+      "[Fade to Silence]"
+    ],
+    [
+      "[Gentle Water Ripple Pad Intro]",
+      "[Steady Rolling Electric Piano Ostinato]",
+      "[Expressive Fretless Bass Lead]",
+      "[Light Shaker and Rimshot Rhythm Build]",
+      "[Emotional High-Register String Climax]",
+      "[Quiet Rippling Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19960623
+}

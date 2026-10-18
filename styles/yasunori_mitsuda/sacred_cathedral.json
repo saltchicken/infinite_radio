@@ -1,0 +1,42 @@
+{
+  "id": "mitsuda_sacred_cathedral",
+  "choices": {
+    "bpm": [52, 58, 64, 70],
+    "lead": [
+      "Baroque pipe organ and weeping solo cello",
+      "celesta chimes and solemn chamber strings",
+      "concert harp arpeggios and resonant French horn"
+    ]
+  },
+  "style": "{bpm}, Yasunori Mitsuda cinematic style, Xenogears and Xenosaga aesthetic, sacred cathedral ambient, {lead}, deep resonant contrabass, distant timpani swells, ancient philosophical mystery, solemn, spiritual, tragic beauty, vast stone hall acoustics, long cathedral reverb tail, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Distant Cathedral Bell Intro]",
+      "[Solemn Pipe Organ Chord Progression]",
+      "[Weeping Solo Cello Melody]",
+      "[Deep Timpani and String Swell]",
+      "[Quiet Celesta Reflection]",
+      "[Majestic Orchestral Climax]",
+      "[Long Cathedral Reverb Decay]"
+    ],
+    [
+      "[Sparse Concert Harp Intro]",
+      "[Slow Chamber Strings Entry]",
+      "[Mournful Horn Countermelody]",
+      "[Building Sacred Harmony]",
+      "[Fragile High-Register Breakdown]",
+      "[Tragic Symphonic Resolution]",
+      "[Fade to Silence]"
+    ],
+    [
+      "[Low Organ Pedal Drone Intro]",
+      "[Delicate Chime and Harp Duet]",
+      "[Sweeping Melancholic Violins]",
+      "[Dramatic Brass and Cymbal Crescendo]",
+      "[Peaceful Spiritual Release]",
+      "[Lingering Final Chord]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19982002
+}

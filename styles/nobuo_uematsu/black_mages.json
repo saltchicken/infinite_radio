@@ -1,0 +1,43 @@
+{
+  "id": "uematsu_black_mages_boss",
+  "choices": {
+    "bpm": [150, 158, 165, 172],
+    "lead": [
+      "overdriven Hammond B3 organ and shredding neoclassical electric guitar",
+      "Gothic baroque pipe organ and dual harmonized lead guitars",
+      "piercing prog-rock synthesizer lead and aggressive distorted guitar riffs"
+    ]
+  },
+  "style": "{bpm}, Nobuo Uematsu boss battle style, The Black Mages aesthetic, neoclassical progressive metal, {lead}, fast galloping bass guitar, rapid double kick drums and syncopated snare fills, dramatic orchestral brass stabs, tense, frantic, high-stakes JRPG boss fight, 70s prog rock meets 90s video game metal, punchy mix, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Rapid Chromatic Bass and Drum Fill Intro]",
+      "[Explosive Distorted Guitar and Organ Riff]",
+      "[Galloping Double Bass Drum Groove]",
+      "[Virtuosic Neoclassical Guitar Solo]",
+      "[Tense Baroque Pipe Organ Breakdown]",
+      "[Trading Keyboard and Guitar Shred Solos]",
+      "[Sudden Dramatic Victory Hit]"
+    ],
+    [
+      "[Ominous Gothic Organ Chord Intro]",
+      "[Frantic Snare Roll Build-up]",
+      "[High-Speed Prog Metal Main Theme]",
+      "[Syncopated Brass and Guitar Stabs]",
+      "[Melodic Heroic Bridge]",
+      "[Frenzied Final Boss Climax]",
+      "[Abrupt Cutoff]"
+    ],
+    [
+      "[Syncopated Bass Ostinato Intro]",
+      "[Screaming Synth Lead Entry]",
+      "[Heavy Palm-Muted Guitar Chugging]",
+      "[Swirling Hammond Organ Arpeggios]",
+      "[Dramatic Half-Time Breakdown]",
+      "[Full Ensemble Speed Crescendo]",
+      "[Feedback Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19940402
+}

@@ -1,0 +1,41 @@
+{
+  "id": "kondo_hyrule_symphonic",
+  "choices": {
+    "bpm": [118, 126, 132, 140],
+    "lead": [
+      "triumphant trumpet fanfare and sweeping symphonic strings",
+      "noble French horn ensemble and soaring piccolo flute",
+      "majestic orchestral brass and rapid violin runs"
+    ]
+  },
+  "style": "{bpm}, Koji Kondo symphonic adventure style, Legend of Zelda Hyrule Field and Overworld aesthetic, {lead}, crisp military marching snare drum, booming timpani and crash cymbals, galloping orchestral cellos and contrabass, heroic, bold, grand fantasy quest, open green plains, dynamic concert hall mix, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Bold Brass Fanfare and Timpani Intro]",
+      "[Galloping Strings and Marching Snare Entry]",
+      "[Heroic Trumpet Overworld Main Theme]",
+      "[Soaring Violin and Flute Countermelody]",
+      "[Mysterious Nocturnal Woodwind Breakdown]",
+      "[Triumphant Full Orchestra Dawn Climax]",
+      "[Grand Symphonic Finale Hit]"
+    ],
+    [
+      "[Rolling Snare Drum and Horn Swell Intro]",
+      "[Upbeat Adventurous String Ostinato]",
+      "[Noble French Horn Melody]",
+      "[Dramatic Timpani and Brass Tension Bridge]",
+      "[Euphoric Key-Change Heroic Return]",
+      "[Resonant Cymbal Crash Outro]"
+    ],
+    [
+      "[Quiet Dawn Flute and Harp Intro]",
+      "[Rising Orchestral Crescendo]",
+      "[Explosive Full Brass March Drop]",
+      "[Rapid String Runs and Trumpet Calls]",
+      "[Majestic Half-Time Finale]",
+      "[Long Concert Hall Reverb Tail]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19860221
+}

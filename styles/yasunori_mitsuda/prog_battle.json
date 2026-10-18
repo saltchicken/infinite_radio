@@ -1,0 +1,43 @@
+{
+  "id": "mitsuda_prog_battle",
+  "choices": {
+    "bpm": [138, 145, 152, 160],
+    "lead": [
+      "heroic brass stabs and virtuosic solo violin",
+      "overdriven prog rock organ and piercing synth lead",
+      "dramatic orchestral strings and frantic woodwind runs"
+    ]
+  },
+  "style": "{bpm}, Yasunori Mitsuda battle theme style, 90s JRPG boss battle, progressive rock orchestral fusion, {lead}, slap bass and driving fretless bassline, tight syncopated drum kit with tribal auxiliary percussion, odd time signature feel, tense, urgent, heroic, high-stakes adventure, punchy mix, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Explosive Drum Fill and Brass Hit Intro]",
+      "[Driving Syncopated Bass Groove]",
+      "[Urgent Violin and Synth Main Riff]",
+      "[Tense Percussion and Bass Breakdown]",
+      "[Soaring Heroic Melody Climax]",
+      "[Rapid Keyboard Solo]",
+      "[Sudden Dramatic End]"
+    ],
+    [
+      "[Tense Ostinato String Intro]",
+      "[Snare Roll and Tom Build-up]",
+      "[High-Energy Prog Rock Drop]",
+      "[Trading Organ and Violin Leads]",
+      "[Mysterious Mid-Battle Bridge]",
+      "[Full Orchestral Boss Climax]",
+      "[Abrupt Cutoff]"
+    ],
+    [
+      "[Frantic Woodwind Run Intro]",
+      "[Galloping Drums and Slap Bass]",
+      "[Dramatic Brass Theme Entry]",
+      "[Syncopated Rhythmic Stops]",
+      "[Euphoric Countermelody Swell]",
+      "[Final Frenzied Crescendo]",
+      "[Ringing Gong Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19980211
+}

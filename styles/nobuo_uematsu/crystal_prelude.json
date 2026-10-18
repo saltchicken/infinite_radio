@@ -1,0 +1,43 @@
+{
+  "id": "uematsu_crystal_prelude",
+  "choices": {
+    "bpm": [68, 74, 80, 86],
+    "lead": [
+      "sweeping concert harp arpeggios and warm solo flute",
+      "expressive oboe melody and delicate celesta",
+      "fingerpicked acoustic guitar and lush chamber strings"
+    ]
+  },
+  "style": "{bpm}, Nobuo Uematsu style, Final Fantasy crystal prelude aesthetic, {lead}, cascading four-octave harp glissandos, warm upright bass, pastoral woodwind harmony, gentle 90s JRPG town theme, serene, nostalgic, magical crystal shrine, warm concert hall reverb, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Cascading Crystal Harp Arpeggio Intro]",
+      "[Warm Solo Flute Melody Entry]",
+      "[Lush Chamber Strings Accompaniment]",
+      "[Expressive Oboe Countermelody]",
+      "[Delicate Celesta and Harp Breakdown]",
+      "[Emotional Orchestral Swell]",
+      "[Ringing Harp Glissando Outro]"
+    ],
+    [
+      "[Fingerpicked Acoustic Guitar Intro]",
+      "[Pastoral Oboe and Flute Duet]",
+      "[Gentle Upright Bass and Light Brush Snare]",
+      "[Sweeping Romantic Strings Bridge]",
+      "[Quiet Woodwind Reflection]",
+      "[Warm Harmonic Resolution]",
+      "[Long Fade Out]"
+    ],
+    [
+      "[Sparkling Celesta and Bell Intro]",
+      "[Ascending Harp Arpeggio Cycle]",
+      "[Soaring Violin and Flute Theme]",
+      "[Nostalgic Key Modulation]",
+      "[Peaceful Chamber Ensemble Climax]",
+      "[Final Shimmering Harp Run]",
+      "[Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19871218
+}

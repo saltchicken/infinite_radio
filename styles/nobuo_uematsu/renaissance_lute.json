@@ -1,0 +1,43 @@
+{
+  "id": "uematsu_renaissance_lute",
+  "choices": {
+    "bpm": [112, 120, 128, 136],
+    "lead": [
+      "virtuosic Spanish nylon guitar and baroque harpsichord",
+      "playful recorder flute and renaissance lute",
+      "jaunty accordion and plucked mandolin"
+    ]
+  },
+  "style": "{bpm}, Nobuo Uematsu medieval folk style, Final Fantasy IX aesthetic, renaissance court and bustling fantasy village, {lead}, rhythmic handclaps and tambourine, bouncy acoustic bass, medieval troubadour dance, Spanish flamenco flair, whimsical, theatrical, cobblestone streets, crisp acoustic mix, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Solo Renaissance Lute Intro]",
+      "[Bouncy Acoustic Bass and Tambourine Entry]",
+      "[Playful Recorder and Harpsichord Melody]",
+      "[Virtuosic Nylon Guitar Flamenco Run]",
+      "[Rhythmic Handclap Breakdown]",
+      "[Lively Full Village Ensemble Climax]",
+      "[Crisp Acoustic Flourish End]"
+    ],
+    [
+      "[Baroque Harpsichord Arpeggio Intro]",
+      "[Jaunty Woodwind and Mandolin Theme]",
+      "[Upbeat Tavern Percussion Groove]",
+      "[Trading Guitar and Flute Solos]",
+      "[Theatrical Half-Time Bridge]",
+      "[Fast Accelerating Dance Finale]",
+      "[Abrupt Stomp Outro]"
+    ],
+    [
+      "[Strummed Spanish Guitar Intro]",
+      "[Castanets and Cajon Rhythm Build]",
+      "[Passionate Melodic Guitar Lead]",
+      "[Bright Harpsichord Countermelody]",
+      "[Dramatic Acoustic Breakdown]",
+      "[Triumphant Flamenco Climax]",
+      "[Ringing Final Chord]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 20000707
+}

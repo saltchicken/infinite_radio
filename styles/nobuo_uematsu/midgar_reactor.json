@@ -1,0 +1,42 @@
+{
+  "id": "uematsu_midgar_reactor",
+  "choices": {
+    "bpm": [92, 98, 104, 110],
+    "lead": [
+      "haunting resonant analog synth lead and metallic bell plucks",
+      "dark orchestral brass swells and gritty 90s workstation synth",
+      "eerie choir-like synth pad and delayed electric piano"
+    ]
+  },
+  "style": "{bpm}, Nobuo Uematsu industrial style, Final Fantasy VII Midgar aesthetic, 90s PlayStation1 Roland SC-88 synth nostalgia, {lead}, deep pulsing synth bass ostinato, heavy mechanical anvil percussion and industrial drum beat, dystopian steampunk metropolis, mako reactor, dark, brooding, mysterious, subterranean tension, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Steam Hiss and Metallic Anvil Hit Intro]",
+      "[Brooding Synth Bass Ostinato]",
+      "[Heavy Industrial Drum Beat Entry]",
+      "[Haunting Analog Synth Main Melody]",
+      "[Eerie Suspended Pad Breakdown]",
+      "[Dramatic Brass and Synth Climax]",
+      "[Echoing Mechanical Fade Out]"
+    ],
+    [
+      "[Dark Subterranean Drone Intro]",
+      "[Rhythmic Clanking Percussion Build]",
+      "[Gritty 90s Synth Lead Entry]",
+      "[Tense Chromatic String Ostinato]",
+      "[Quiet Delayed Electric Piano Bridge]",
+      "[Crushing Steampunk Groove Return]",
+      "[Sudden Power-Down End]"
+    ],
+    [
+      "[Pulsing Bassline and Hi-Hat Intro]",
+      "[Mysterious Bell Synth Arpeggio]",
+      "[Slow Stomping Industrial Beat]",
+      "[Mournful Horn and Synth Harmony]",
+      "[Rising Reactor Tension Swell]",
+      "[Long Reverberant Tail]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19970131
+}
