@@ -288,6 +288,23 @@
         </div>
       </div>
 
+      <div class="grid-2">
+        <div class="field">
+          <label>BPM Modification</label>
+          <select id="enable-bpm-modification">
+            <option value="true">✅ Enabled</option>
+            <option value="false">❌ Disabled</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>BPM Source (If no override)</label>
+          <select id="bpm-source">
+            <option value="style">Style Random Choice</option>
+            <option value="abc">ABC File (Q: tag)</option>
+          </select>
+        </div>
+      </div>
+
       <div class="field">
         <label>BPM Override (Empty = Auto)</label>
         <input type="number" id="bpm-override" placeholder="e.g. 120" min="1" max="999" />
@@ -519,7 +536,11 @@
       document.getElementById("abc-order-select").value = rawConfig.abc_order || "random";
       document.getElementById("abc-base-dir").value = rawConfig.abc_base_dir || "sheetsage/output";
       document.getElementById("strip-abc-tempo").value = rawConfig.strip_abc_tempo ? "true" : "false";
+      
+      document.getElementById("enable-bpm-modification").value = rawConfig.enable_bpm_modification !== false ? "true" : "false";
+      document.getElementById("bpm-source").value = rawConfig.bpm_source || "style";
       document.getElementById("bpm-override").value = rawConfig.bpm_override || "";
+      
       document.getElementById("ar-lora-select").value = rawConfig.ar_lora || "";
       document.getElementById("nar-lora-select").value = rawConfig.nar_lora || "";
       document.getElementById("ar-scale").value = rawConfig.ar_scale ?? 0.5;
@@ -546,7 +567,11 @@
         abc_order: document.getElementById("abc-order-select").value,
         abc_base_dir: document.getElementById("abc-base-dir").value.trim(),
         strip_abc_tempo: document.getElementById("strip-abc-tempo").value === "true",
+        
+        enable_bpm_modification: document.getElementById("enable-bpm-modification").value === "true",
+        bpm_source: document.getElementById("bpm-source").value,
         bpm_override: bpmVal ? parseInt(bpmVal, 10) : null,
+        
         ar_lora: document.getElementById("ar-lora-select").value || null,
         nar_lora: document.getElementById("nar-lora-select").value || null,
         ar_scale: parseFloat(document.getElementById("ar-scale").value),

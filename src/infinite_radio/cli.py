@@ -51,6 +51,8 @@ DEFAULT_STATE = {
     "cot": "melody",
     "abc_base_dir": "sheetsage/output",
     "strip_abc_tempo": False,
+    "enable_bpm_modification": True,
+    "bpm_source": "style",  # "style" or "abc"
     "bpm_override": None,
     # DSP Settings
     "enable_normalization": True,
@@ -308,34 +310,13 @@ def main():
                 chosen = random.choice(active_request["lyrics"])
                 active_request["lyrics"] = "\n".join(chosen) if isinstance(chosen, list) else chosen
 
-            bpm_override = active_request.get("bpm_override")
-            if "choices" in active_request:
-                choices = active_request.pop("choices")
-                if isinstance(active_request.get("style"), str):
-                    for key, options in choices.items():
-                        if key == "bpm" and bpm_override:
-                            chosen_val = str(bpm_override)
-                        else:
-                            chosen_val = str(random.choice(options))
-                        active_request["style"] = active_request["style"].replace(f"{{{key}}}", chosen_val)
-
-            # Ensure the prompt explicitly reflects the BPM Override if it missed the {bpm} substitution
-            if bpm_override and isinstance(active_request.get("style"), str):
-                style_str = active_request["style"]
-                if re.match(r'^\d{2,3}\b', style_str):
-                    # ADDED " bpm" to the replacement string below
-                    style_str = re.sub(r'^\d{2,3}\b(?:\s*bpm)?\s*,?\s*', f"{bpm_override} bpm, ", style_str, flags=re.IGNORECASE)
-                elif str(bpm_override) not in style_str:
-                    # ADDED " bpm" to the fallback string below
-                    style_str = f"{bpm_override} bpm, {style_str}"
-                active_request["style"] = style_str
-
+            # 1. LOAD THE ABC FILE FIRST
+            raw_abc = None
             if "abc" in active_request and active_request["abc"]:
                 abc_reqs = active_request["abc"]
                 if isinstance(abc_reqs, str):
                     abc_reqs = [s.strip() for s in abc_reqs.split(",") if s.strip()]
 
-                raw_abc = None
                 current_abc_key = (tuple(abc_reqs), str(abc_base_dir), str(cot_mode), str(abc_order))
                 now = time.monotonic()
                 if current_abc_key != abc_cache_key or (now - abc_cache_time) > CACHE_TTL_SECONDS:
@@ -364,9 +345,59 @@ def main():
 
                 if raw_abc:
                     active_request["abc"] = raw_abc
-
             else:
                 active_request.pop("abc", None)
+
+            # 2. EXTRACT BPM FROM THE ABC FILE
+            abc_bpm = None
+            if raw_abc:
+                # Match standard ABC tempo tags like "Q: 1/4=120", "Q:120", or "[Q: 120]"
+                bpm_match = re.search(r'(?:^Q:|\[Q:)[^=\n\]]*=?\s*(\d{2,3})', raw_abc, flags=re.MULTILINE)
+                if bpm_match:
+                    abc_bpm = bpm_match.group(1)
+
+            # 3. DETERMINE TARGET BPM
+            enable_bpm = active_request.get("enable_bpm_modification", True)
+            bpm_source = active_request.get("bpm_source", "style")
+            bpm_override = active_request.get("bpm_override")
+            
+            style_random_bpm = None
+            if "choices" in active_request and "bpm" in active_request["choices"]:
+                style_random_bpm = str(random.choice(active_request["choices"]["bpm"]))
+
+            target_bpm = None
+            if enable_bpm:
+                if bpm_override:
+                    target_bpm = str(bpm_override)
+                elif bpm_source == "abc" and abc_bpm:
+                    target_bpm = abc_bpm
+                elif style_random_bpm:
+                    target_bpm = style_random_bpm
+
+            # 4. FORMAT THE STYLE PROMPT WITH THE TARGET BPM
+            if "choices" in active_request:
+                choices = active_request.pop("choices")
+                if isinstance(active_request.get("style"), str):
+                    for key, options in choices.items():
+                        if key == "bpm":
+                            # If enable_bpm is false, just use the random style bpm to avoid leaving {bpm} unresolved
+                            chosen_val = target_bpm if target_bpm else (style_random_bpm if style_random_bpm else str(random.choice(options)))
+                        else:
+                            chosen_val = str(random.choice(options))
+                        active_request["style"] = active_request["style"].replace(f"{{{key}}}", chosen_val)
+
+            # Ensure the prompt explicitly reflects the Target BPM if it missed the {bpm} substitution
+            if enable_bpm and target_bpm and isinstance(active_request.get("style"), str):
+                style_str = active_request["style"]
+                if re.match(r'^\d{2,3}\b', style_str):
+                    style_str = re.sub(r'^\d{2,3}\b(?:\s*bpm)?\s*,?\s*', f"{target_bpm} bpm, ", style_str, flags=re.IGNORECASE)
+                elif str(target_bpm) not in style_str:
+                    style_str = f"{target_bpm} bpm, {style_str}"
+                active_request["style"] = style_str
+
+            # Pass the backend enforcement flags directly to the payload builder
+            active_request["_target_bpm"] = target_bpm if enable_bpm else None
+            active_request["_enable_bpm"] = enable_bpm
 
             # Build API payload and stripped yue_kwargs via shared client utility
             api_payload = build_api_payload(

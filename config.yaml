@@ -8,8 +8,25 @@ cot: "melody"
 abc_base_dir: "sheetsage/output"
 abc: "vgm/"
 
-strip_abc_tempo: true
+# === BPM CONTROL SYSTEM ===
+
+# enable_bpm_modification:
+#   true = Actively calculates a target BPM and injects it into both the prompt and the ABC file.
+#   false = Hands-off mode. Leaves the prompt and ABC file completely untouched.
+enable_bpm_modification: false
+
+# bpm_source: Where to get the target BPM if the override box is empty.
+#   "style" = Picks a random BPM from the choices in your style's .json file.
+#   "abc" = Extracts the natural tempo (Q: tag) written inside the sheet music.
+bpm_source: "abc"
+
+# bpm_override: Absolute top-priority master override (e.g. 150). Leave empty to use bpm_source.
 bpm_override:
+
+# strip_abc_tempo:
+#   true = Deletes Q: tags from the ABC file entirely.
+#   (Note: If enable_bpm_modification is true and a target BPM is found, it will overwrite the tempo instead of stripping it).
+strip_abc_tempo: false
 
 # --- LoRA Defaults ---
 ar_scale: 0.5
