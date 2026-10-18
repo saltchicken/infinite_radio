@@ -1,0 +1,42 @@
+{
+  "id": "wise_stickerbush_symphony",
+  "choices": {
+    "bpm": [82, 86, 90, 94],
+    "lead": [
+      "wistful high-register synth whistle and emotional saxophone-like lead",
+      "cascading crystal synth arpeggios and soaring prog-rock electric guitar",
+      "airy pan flute synth and warm chorused electric piano"
+    ]
+  },
+  "style": "{bpm}, David Wise style, Donkey Kong Country 2 Stickerbush Symphony aesthetic, melodic 90s electronic downtempo, {lead}, smooth rolling breakbeat percussion, warm melodic bassline, golden hour sky above thorny brambles, bittersweet nostalgia, uplifting, emotional video game soundtrack, lush stereo delay, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Warm Chorused Pad and Arpeggio Intro]",
+      "[Smooth Rolling Midtempo Drum Entry]",
+      "[Wistful High Whistle Synth Main Melody]",
+      "[Emotional Saxophone-Synth Countermelody]",
+      "[Dreamy Arpeggiated Breakdown]",
+      "[Soaring Uplifting Key-Change Climax]",
+      "[Long Nostalgic Fade Out]"
+    ],
+    [
+      "[Cascading Bell Synth Ostinato Intro]",
+      "[Melodic Fretless Bass and Crisp Hi-Hats]",
+      "[Bittersweet Flute and Pad Theme]",
+      "[Expressive Clean Guitar Solo Bridge]",
+      "[Full Lush Electronic Ensemble Return]",
+      "[Quiet Sunset Resolution]"
+    ],
+    [
+      "[Soft Atmospheric Wind and Pad Intro]",
+      "[Steady Downtempo Groove Build]",
+      "[Soaring Melancholic Synth Lead]",
+      "[Layered Harmonic String Swell]",
+      "[Intimate Piano and Arpeggio Breakdown]",
+      "[Triumphant Emotional Finale]",
+      "[Echoing Delay Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19951120
+}

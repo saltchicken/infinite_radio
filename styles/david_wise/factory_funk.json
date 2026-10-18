@@ -1,0 +1,43 @@
+{
+  "id": "wise_factory_funk",
+  "choices": {
+    "bpm": [126, 132, 138, 144],
+    "lead": [
+      "gritty overdriven synth lead and metallic FM slap bass",
+      "aggressive prog-rock electric guitar and punchy synth brass",
+      "syncopated clavinet synth and resonant filter-swept lead"
+    ]
+  },
+  "style": "{bpm}, David Wise industrial funk style, Donkey Kong Country Fear Factory and Minecart aesthetic, {lead}, clanging anvil percussion and driving 90s breakbeat drums, relentless rhythmic momentum, subterranean machinery and runaway minecart tension, dark, groovy, high-octane 16-bit synth-rock, tight punchy mix, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Clanging Metallic Anvil and Piston Intro]",
+      "[Gritty Syncopated Slap Bass Entry]",
+      "[Driving Industrial Breakbeat Drop]",
+      "[Aggressive Synth and Guitar Main Riff]",
+      "[Tense Subterranean Ambient Breakdown]",
+      "[High-Speed Runaway Climax]",
+      "[Sudden Mechanical Stop]"
+    ],
+    [
+      "[Fast Hi-Hat and Rimshot Countdown Intro]",
+      "[Relentless Chugging Synth Bassline]",
+      "[Punchy Synth Brass Melody]",
+      "[Virtuosic Overdriven Guitar Solo]",
+      "[Rhythmic Factory Percussion Bridge]",
+      "[Explosive Full-Throttle Groove Return]",
+      "[Echoing Metal Hit Outro]"
+    ],
+    [
+      "[Ominous Low Drone and Steam Hiss Intro]",
+      "[Building Tom Drum and Snare Roll]",
+      "[Funky Clavinet and Distorted Lead Groove]",
+      "[Syncopated Stop-and-Go Riffing]",
+      "[Frenzied Pitch-Bent Synth Solo]",
+      "[Final Heavy Industrial Drop]",
+      "[Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19941995
+}

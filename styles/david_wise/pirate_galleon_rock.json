@@ -1,0 +1,43 @@
+{
+  "id": "wise_pirate_galleon_rock",
+  "choices": {
+    "bpm": [140, 150, 160, 170],
+    "lead": [
+      "jaunty sea shanty accordion and shredding heavy metal electric guitar",
+      "frenzied folk fiddle and triumphant orchestral brass fanfare",
+      "baroque harpsichord and aggressive double-kick prog metal guitar"
+    ]
+  },
+  "style": "{bpm}, David Wise boss battle style, Gang-Plank Galleon and Crocodile Cacophony aesthetic, pirate folk-metal fusion, {lead}, starts as a bouncy acoustic sea shanty then accelerates into frantic heavy metal, booming cannon percussion, double bass drum gallop, theatrical, chaotic, heroic swashbuckling showdown, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Jaunty Solo Accordion Sea Shanty Intro]",
+      "[Bouncy Acoustic Bass and Tambourine]",
+      "[Tempo Accelerating Snare Roll Build]",
+      "[Explosive Heavy Metal Guitar and Brass Drop]",
+      "[Shredding Lead Guitar and Fiddle Duel]",
+      "[Frenzied Double-Kick Boss Climax]",
+      "[Booming Cannon Blast End]"
+    ],
+    [
+      "[Playful Recorder and Harpsichord Intro]",
+      "[Stomping Pirate Deck Percussion]",
+      "[Sudden Distortion Pedal and Thrash Riff]",
+      "[Heroic Trumpet and Guitar Main Theme]",
+      "[Dramatic Half-Time Breakdown]",
+      "[Chaotic Full-Speed Finale]",
+      "[Abrupt Cutoff]"
+    ],
+    [
+      "[Distant Thunder and Creaking Ship Intro]",
+      "[Galloping Bass and Marching Snare Build]",
+      "[Aggressive Pirate Metal Anthem]",
+      "[Swirling Organ and Accordion Bridge]",
+      "[Virtuosic Neoclassical Guitar Solo]",
+      "[Triumphant Swashbuckling Crescendo]",
+      "[Feedback Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19941996
+}

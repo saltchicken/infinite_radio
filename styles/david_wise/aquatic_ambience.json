@@ -1,0 +1,42 @@
+{
+  "id": "wise_aquatic_ambience",
+  "choices": {
+    "bpm": [60, 65, 70, 75],
+    "lead": [
+      "lush Korg Wavestation vector synth pad and weeping clean electric guitar",
+      "dreamy 16-bit SNES SPC700 electric piano and soaring ambient synth lead",
+      "shimmering bell arpeggio and warm fretless synth bass"
+    ]
+  },
+  "style": "{bpm}, David Wise style, Donkey Kong Country Aquatic Ambience aesthetic, 90s ambient synth-prog, {lead}, slow gated reverb electronic snare, deep resonant sub bass notes, bioluminescent deep ocean, weightless underwater meditation, nostalgic 16-bit SNES realism, vast cavernous reverb, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Submerged Evolving Synth Pad Intro]",
+      "[Shimmering Arpeggiated Bell Ostinato]",
+      "[Slow Gated Reverb Drum Beat Entry]",
+      "[Soaring Emotional Synth and Guitar Lead]",
+      "[Weightless Ambient Breakdown]",
+      "[Majestic Underwater Crescendo]",
+      "[Long Echoing Fade Out]"
+    ],
+    [
+      "[Deep Ocean Drone and Bubble Texture Intro]",
+      "[Warm Electric Piano Chord Progression]",
+      "[Delayed Clean Electric Guitar Melody]",
+      "[Steady Slow Electronic Pulse]",
+      "[Dreamy Suspended Harmony Bridge]",
+      "[Euphoric High-Register Synth Climax]",
+      "[Fade to Silence]"
+    ],
+    [
+      "[Sparse Crystalline Pluck Intro]",
+      "[Resonant Sub Bass and Lush Strings Swell]",
+      "[Wistful Synth Lead Theme]",
+      "[Soft Electronic Tom and Snare Groove]",
+      "[Quiet Meditative Interlude]",
+      "[Lingering Reverb Tail Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19941121
+}

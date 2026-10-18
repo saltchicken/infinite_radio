@@ -1,0 +1,43 @@
+{
+  "id": "wise_jungle_hijinx",
+  "choices": {
+    "bpm": [116, 122, 128, 134],
+    "lead": [
+      "wooden marimba and punchy big-band jazz brass",
+      "breathy tribal bamboo flute and groovy slap bass",
+      "bright steel drums and wailing jazz-funk saxophone"
+    ]
+  },
+  "style": "{bpm}, David Wise jungle style, Donkey Kong Country DK Island Swing and Tropical Freeze aesthetic, {lead}, dense polyrhythmic congas, bongos, and talking drums, syncopated funk drum kit, rainforest canopy adventure, starts atmospheric then erupts into upbeat swing groove, playful, energetic, crisp dynamic mix, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Rainforest Ambience and Low Tribal Drum Intro]",
+      "[Mysterious Bamboo Flute and Marimba Build]",
+      "[Sudden Upbeat Jazz-Swing Brass Drop]",
+      "[Groovy Slap Bass and Conga Polyrhythm]",
+      "[Virtuosic Saxophone and Xylophone Solo]",
+      "[High-Energy Jungle Carnival Climax]",
+      "[Punchy Brass Stinger End]"
+    ],
+    [
+      "[Syncopated Bongo and Woodblock Intro]",
+      "[Bouncy Upright Bass and Marimba Ostinato]",
+      "[Bright Trumpet and Trombone Main Theme]",
+      "[Atmospheric Canopy Flute Breakdown]",
+      "[Accelerating Tribal Drum Roll Build]",
+      "[Full Big-Band Jungle Groove Return]",
+      "[Abrupt Drum Hit Outro]"
+    ],
+    [
+      "[Playful Pizzicato and Steel Drum Intro]",
+      "[Funky Drum Kit and Percussion Entry]",
+      "[Catchy Syncopated Island Melody]",
+      "[Call-and-Response Brass and Woodwinds]",
+      "[Minimal Percussion Solo Bridge]",
+      "[Joyful Tropical Finale]",
+      "[Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19942014
+}
