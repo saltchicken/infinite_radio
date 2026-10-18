@@ -1,0 +1,40 @@
+{
+  "id": "eurodance_anthem",
+  "choices": {
+    "bpm": [126, 128, 130, 132]
+  },
+  "style": "{bpm} bpm, eurodance anthem, 90s dance pop, upbeat energetic groove, bright classic piano chords, punchy four on the floor kick, driving synth bass, uplifting melodic lead, festival mainstage, tension build and energetic drop.",
+  "lyrics": [
+    [
+      "[Intro Synth Hook]",
+      "[Driving Beat Entry]",
+      "[Uplifting Piano Chords]",
+      "[Snare Roll Build-up]",
+      "[Euphoric Dance Drop]",
+      "[Melodic Synth Solo]",
+      "[Second Build-up]",
+      "[Main Drop]",
+      "[Energetic Outro]"
+    ],
+    [
+      "[Filter Sweep Intro]",
+      "[Four On The Floor Beat]",
+      "[Bright Piano Riff]",
+      "[Rising Energy Build]",
+      "[High Energy Drop]",
+      "[Breakdown with Chords]",
+      "[Final Peak Drop]",
+      "[Fade Out]"
+    ],
+    [
+      "[Stripped Intro Kick]",
+      "[Arpeggio Melody]",
+      "[Bassline Drive]",
+      "[Tension Build-up]",
+      "[Anthemic Club Drop]",
+      "[Outro Groove]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 128128
+}
