@@ -17,3 +17,4 @@ sheetsage/**
 
 *.safetensors
 
+.aider*
