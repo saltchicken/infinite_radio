@@ -1,0 +1,43 @@
+{
+  "id": "chrono_cross_islands",
+  "choices": {
+    "bpm": [78, 84, 90, 96],
+    "lead": [
+      "expressive Celtic violin and passionate Spanish nylon guitar",
+      "wistful tin whistle and gentle nostalgic accordion",
+      "breathy Andean quena and shimmering 12-string acoustic guitar"
+    ]
+  },
+  "style": "{bpm} bpm, Chrono Cross soundtrack style, Yasunori Mitsuda PlayStation 1 acoustic aesthetic, {lead}, melodic fretless bass, tropical hand percussion, udu drum, shaker, and bodhran, sun-drenched azure sea, tropical archipelago exploration, bittersweet nostalgia, parallel worlds, lush natural room reverb, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Ocean Waves and Wind Chime Intro]",
+      "[Strummed 12-String Acoustic Guitar Ostinato]",
+      "[Warm Fretless Bass and Udu Groove Entry]",
+      "[Passionate Celtic Violin Melody]",
+      "[Sunlit Accordion Countermelody]",
+      "[Grand Sweeping Coastal Horizon Climax]",
+      "[Resonant Acoustic Guitar Fade Out]"
+    ],
+    [
+      "[Fingerpicked Nylon Guitar Intro]",
+      "[Light Shaker and Wood Percussion Build]",
+      "[Wistful Tin Whistle Main Theme]",
+      "[Emotional Cello and Accordion Swell]",
+      "[Quiet Breezy Acoustic Breakdown]",
+      "[Joyful Island Village Dance Finale]",
+      "[Gentle Lingering Outro]"
+    ],
+    [
+      "[Soft Ambient Surf and Harp Intro]",
+      "[Syncopated Bodhran and Bass Rhythm]",
+      "[Soaring Andean Quena Lead]",
+      "[Dynamic Acoustic Guitar Arpeggios]",
+      "[Parallel World Melancholic Interlude]",
+      "[Triumphant Sun-Drenched Crescendo]",
+      "[Fade to Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19991118
+}
