@@ -1,0 +1,40 @@
+{
+  "id": "gregorian_chant_ambient",
+  "choices": {
+    "bpm": [45, 50, 55, 60],
+    "lead": [
+      "deep monastic wordless choir pads",
+      "ethereal synthetic male choir",
+      "solemn organ and wordless vocalizations"
+    ]
+  },
+  "style": "{bpm} bpm, gregorian chant aesthetic, {lead}, sacred medieval atmosphere, monastic, deep cathedral reverb, spiritual, solemn, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Cathedral Ambience Intro]",
+      "[Deep Monastic Pad Entry]",
+      "[Solemn Chord Progression]",
+      "[Ethereal High Register Swell]",
+      "[Meditative Breakdown]",
+      "[Long Reverb Fade Out]"
+    ],
+    [
+      "[Distant Bell Toll Intro]",
+      "[Low Drone and Choir Pad]",
+      "[Sacred Harmony Build]",
+      "[Majestic Cathedral Swell]",
+      "[Quiet Spiritual Reflection]",
+      "[Fade to Silence]"
+    ],
+    [
+      "[Sparse Organ Drone Intro]",
+      "[Slow Sweeping Choir Pad]",
+      "[Resonant Acoustic Space]",
+      "[Harmonic Resolution]",
+      "[Peaceful Outro]",
+      "[Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 10981098
+}
