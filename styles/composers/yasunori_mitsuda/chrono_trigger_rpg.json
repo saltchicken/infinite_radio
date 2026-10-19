@@ -1,0 +1,43 @@
+{
+  "id": "mitsuda_chrono_trigger_rpg",
+  "choices": {
+    "bpm": [100, 110, 120, 130],
+    "lead": [
+      "bright 16-bit pan flute and warm synth strings",
+      "heroic brass ensemble and driving snare drum",
+      "nostalgic music box and melancholic oboe"
+    ]
+  },
+  "style": "{bpm} bpm, Yasunori Mitsuda style, Chrono Trigger aesthetic, 16-bit SNES SPC700 soundfont, {lead}, melodic bassline, classic JRPG adventure, time travel fantasy, nostalgic, emotional, heroic, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[16-bit Harp Arpeggio Intro]",
+      "[Heroic Brass Melody Entry]",
+      "[Driving Snare and Bass Groove]",
+      "[Soaring Flute Countermelody]",
+      "[Emotional String Breakdown]",
+      "[Triumphant JRPG Climax]",
+      "[Fading Synth Outro]"
+    ],
+    [
+      "[Mysterious Wind and Chime Intro]",
+      "[Nostalgic Oboe Main Theme]",
+      "[Syncopated Percussion Build]",
+      "[Warm Synth Pad Swell]",
+      "[Melancholic Minor-Key Bridge]",
+      "[Joyful Ensemble Return]",
+      "[Echoing Bell End]"
+    ],
+    [
+      "[Bouncy Pizzicato and Bass Intro]",
+      "[Bright Pan Flute Lead]",
+      "[Marching Snare Rhythm]",
+      "[Dramatic Brass Stabs]",
+      "[Quiet Music Box Interlude]",
+      "[Grand Orchestral Crescendo]",
+      "[Fade to Silence]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19950311
+}
