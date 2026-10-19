@@ -1,0 +1,42 @@
+{
+  "id": "kikuta_mana_fantasy",
+  "choices": {
+    "bpm": [85, 95, 105, 115],
+    "lead": [
+      "bright 16-bit marimba and breathy pan flute",
+      "warm square wave synth and resonant gamelan bells",
+      "expressive SNES string ensemble and crystalline glockenspiel"
+    ]
+  },
+  "style": "{bpm} bpm, Hiroki Kikuta style, Secret of Mana aesthetic, 16-bit SNES SPC700 soundfont, {lead}, lush tribal percussion, deep warm bass, ethereal fantasy world, lush green forests, magical, nostalgic, emotional JRPG soundtrack, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Lush Marimba and Bell Intro]",
+      "[Breathy Flute Melody Entry]",
+      "[Tribal Percussion Groove]",
+      "[Warm Synth Pad Breakdown]",
+      "[Emotional String Swell]",
+      "[Magical 16-bit Climax]",
+      "[Fading Glockenspiel Outro]"
+    ],
+    [
+      "[Mysterious Gamelan Intro]",
+      "[Bouncy Bass and Shaker Rhythm]",
+      "[Bright Square Wave Lead]",
+      "[Soaring Flute Countermelody]",
+      "[Quiet Forest Ambient Bridge]",
+      "[Joyful Ensemble Return]",
+      "[Echoing Percussion End]"
+    ],
+    [
+      "[Soft Wind and Chime Intro]",
+      "[Gentle Marimba Arpeggio]",
+      "[Expressive String Theme]",
+      "[Syncopated Tribal Drum Build]",
+      "[Euphoric Fantasy Drop]",
+      "[Peaceful Resolution]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19930806
+}
