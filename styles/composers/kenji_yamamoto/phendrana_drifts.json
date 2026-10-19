@@ -1,0 +1,43 @@
+{
+  "id": "yamamoto_phendrana_drifts",
+  "choices": {
+    "bpm": [70, 80, 90, 100],
+    "lead": [
+      "crystalline digital piano and sweeping icy synth pad",
+      "cold FM bell arpeggios and breathy synthetic choir",
+      "glassy electric piano and soaring ethereal synth lead"
+    ]
+  },
+  "style": "{bpm} bpm, Kenji Yamamoto style, Metroid Prime Phendrana Drifts aesthetic, cold atmospheric electronic, {lead}, crisp electronic breakbeat, deep resonant sub-bass, snowy alien landscape, beautiful but desolate, icy cavernous reverb, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Icy Wind and Chime Intro]",
+      "[Crystalline Piano Melody]",
+      "[Sweeping Synth Pad Swell]",
+      "[Crisp Electronic Beat Drop]",
+      "[Cold Atmospheric Breakdown]",
+      "[Ethereal Choir Climax]",
+      "[Fading Snowstorm Outro]"
+    ],
+    [
+      "[Glassy FM Bell Arpeggio Intro]",
+      "[Deep Sub-Bass Entry]",
+      "[Syncopated Breakbeat Groove]",
+      "[Soaring Synth Lead Theme]",
+      "[Desolate Ambient Bridge]",
+      "[Beautiful Icy Return]",
+      "[Echoing Piano Fade Out]"
+    ],
+    [
+      "[Sparse Electric Piano Intro]",
+      "[Breathy Synthetic Choir Swell]",
+      "[Rolling Electronic Percussion]",
+      "[Resonant Bassline Drop]",
+      "[Quiet Frozen Interlude]",
+      "[Majestic Winter Landscape Crescendo]",
+      "[Long Reverb Tail Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 20021119
+}
