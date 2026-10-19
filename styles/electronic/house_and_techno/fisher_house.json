@@ -3,15 +3,14 @@
   "choices": {
     "bpm": [124, 125, 126, 128]
   },
-  "style": "{bpm} bpm, tech house, bouncy driving bassline, punchy four on the floor kick, shuffling hi-hats, high energy club banger, festival mainstage, tension build and heavy drop.",
+  "style": "{bpm} bpm, tech house, bouncy driving bassline, punchy four on the floor kick, shuffling hi-hats, high energy club banger, festival mainstage, tension build and heavy drop, purely instrumental, zero vocals.",
   "lyrics": [
     [
       "[DJ Intro]",
       "[Percussion Build-up]",
-      "[Quirky Vocal Hook]",
+      "[Quirky Synth Hook]",
       "[Heavy Bass Drop]",
       "[Minimal Breakdown]",
-      "[Vocal Build-up]",
       "[Second Drop]",
       "[DJ Outro]"
     ],
@@ -19,7 +18,7 @@
       "[Stripped Back Intro]",
       "[Bouncy Bassline Entry]",
       "[Rising Snare Roll]",
-      "[Catchy Vocal Phrase]",
+      "[Catchy Sample Chop]",
       "[Tech House Drop]",
       "[Groove Outro]"
     ],
@@ -28,7 +27,7 @@
       "[Tension Building Synth]",
       "[Massive Build-up]",
       "[Bass and Kick Drop]",
-      "[Vocal Sample Loop]",
+      "[Rhythmic Sample Loop]",
       "[Fade Out]"
     ]
   ],
