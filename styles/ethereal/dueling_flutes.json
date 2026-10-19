@@ -1,0 +1,43 @@
+{
+  "id": "dueling_flutes_interplay",
+  "choices": {
+    "bpm": [86, 94, 102, 110],
+    "flute_pairing": [
+      "virtuosic silver concert flute and breathy Japanese bamboo shakuhachi",
+      "lively Irish tin whistle and deep wooden Andean quena",
+      "earthy Romanian pan flute and soaring baroque concert piccolo"
+    ]
+  },
+  "style": "{bpm} bpm, dueling flutes, instrumental countermelody duel, world folk chamber fusion, {flute_pairing}, rapid call and response, intricate polyphonic runs, delicate acoustic guitar fingerpicking, resonant upright bass, subtle frame drum and finger cymbals, mystical forest glade, playful and tense woodwind virtuosity, organic concert hall reverb, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Atmospheric Frame Drum and Wind Intro]",
+      "[First Flute Opening Call]",
+      "[Second Flute Contrasting Response]",
+      "[Acoustic Guitar and Bass Entry]",
+      "[Rapid Trading Flute Solos]",
+      "[Intricate Dual Flute Counterpoint Climax]",
+      "[Harmonized High-Register Outro]"
+    ],
+    [
+      "[Fingerpicked Folk Guitar Intro]",
+      "[Breathy Woodwind Drone Swell]",
+      "[Staccato First Flute Motif]",
+      "[Lyrical Second Flute Interruption]",
+      "[Building Polyrhythmic Hand Drum Duel]",
+      "[Full Speed Harmonized Run Crescendo]",
+      "[Long Fading Reverb Tail]"
+    ],
+    [
+      "[Sparse Bell and Chime Ambience]",
+      "[Echoing Wooden Flute Ostinato]",
+      "[Sharp Silver Flute Entry]",
+      "[Syncopated Rhythm and Flute Trills]",
+      "[Dynamic Solo Exchanges Breakdown]",
+      "[Triumphant Unison Flute Fanfare]",
+      "[Quiet Breath Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 77889900
+}
