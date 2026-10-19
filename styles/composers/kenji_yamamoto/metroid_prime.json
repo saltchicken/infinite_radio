@@ -1,0 +1,43 @@
+{
+  "id": "yamamoto_metroid_prime",
+  "choices": {
+    "bpm": [80, 90, 100, 110],
+    "lead": [
+      "eerie digital choir and resonant sweeping synth pad",
+      "cold metallic FM synth and driving sequenced bassline",
+      "haunting alien woodwind and deep sub-bass drone"
+    ]
+  },
+  "style": "{bpm} bpm, Kenji Yamamoto style, Metroid Prime aesthetic, sci-fi atmospheric electronic, {lead}, metallic industrial percussion, echoing cavernous reverb, alien planet exploration, isolation, dark, mysterious, futuristic, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Eerie Alien Drone Intro]",
+      "[Resonant Synth Pad Swell]",
+      "[Metallic Percussion Beat Drop]",
+      "[Haunting Digital Choir Melody]",
+      "[Cold Atmospheric Breakdown]",
+      "[Driving Sequenced Bass Climax]",
+      "[Echoing Cavern Fade Out]"
+    ],
+    [
+      "[Cold FM Synth Arpeggio Intro]",
+      "[Deep Sub-Bass Drone Entry]",
+      "[Syncopated Industrial Rhythm]",
+      "[Mysterious Alien Woodwind Solo]",
+      "[Tense Sci-Fi Bridge]",
+      "[Heavy Electronic Groove Return]",
+      "[Sudden Mechanical Stop]"
+    ],
+    [
+      "[Distant Metallic Clang Intro]",
+      "[Sweeping Filtered Pad Build]",
+      "[Pulsing Sequenced Bassline]",
+      "[Ethereal Choir Countermelody]",
+      "[Dark Subterranean Interlude]",
+      "[Intense Alien Encounter Crescendo]",
+      "[Long Reverb Tail Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 20021118
+}
