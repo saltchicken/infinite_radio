@@ -462,21 +462,22 @@ def create_remote_api(
             raise HTTPException(status_code=400, detail="No track playing")
 
         try:
-            votes_file = base_path / "votes.jsonl"
             feature_val = metadata.get("_source_style") if feature == "style" else metadata.get("_source_abc")
+            now_iso = datetime.now().isoformat()
+            lyrics = metadata.get("lyrics") if feature == "style" else None
             
-            # 1. Save to the new SQLite Database
+            # Save to the SQLite Database
             with sqlite3.connect(db_path) as conn:
                 conn.execute('''
                     INSERT INTO votes (timestamp, vote, feature, value, track, lyrics)
                     VALUES (?, ?, ?, ?, ?, ?)
                 ''', (
-                    datetime.now().isoformat(),
+                    now_iso,
                     vote_type,
                     feature,
                     feature_val,
                     f"Track {track_num}",
-                    metadata.get("lyrics") if feature == "style" else None
+                    lyrics
                 ))
                 
                 # If it's an ABC upvote, add it to the virtual directory table
@@ -487,23 +488,18 @@ def create_remote_api(
                     ''', (feature_val,))
                 conn.commit()
 
-            # 2. Maintain JSONL fallback for existing scripts
             vote_record = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": now_iso,
                 "vote": vote_type,
                 "feature": feature,
                 "value": feature_val,
                 "track": f"Track {track_num}",
             }
-
-            if feature == "style" and metadata.get("lyrics"):
-                vote_record["lyrics"] = metadata.get("lyrics")
-
-            with open(votes_file, "a", encoding="utf-8") as f:
-                f.write(json.dumps(vote_record) + "\n")
+            if lyrics:
+                vote_record["lyrics"] = lyrics
 
             icon = "⭐" if vote_type == "up" else "👎"
-            api_logger.info(f"{icon} {vote_type.title()}voted {feature}! Saved to DB and {votes_file.name}")
+            api_logger.info(f"{icon} {vote_type.title()}voted {feature}! Saved to DB")
             return {"status": "success", "record": vote_record}
 
         except Exception as e:
