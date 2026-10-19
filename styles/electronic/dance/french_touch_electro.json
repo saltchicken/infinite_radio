@@ -1,0 +1,43 @@
+{
+  "id": "french_touch_electro",
+  "choices": {
+    "bpm": [122, 125, 128],
+    "lead": [
+      "funky filtered disco guitar chops and vocoder synth chords",
+      "pumping French house synth brass and slapped electric bass",
+      "bright phased electric piano and resonant analog synth lead"
+    ]
+  },
+  "style": "{bpm} bpm, French touch, electro disco, French house, {lead}, heavy sidechain compression, punchy four on the floor kick drum, sizzling open hi-hats, Parisian club groove, infectious dancefloor rhythm, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Filtered Disco Sample Intro]",
+      "[Filter Sweep and Snare Build]",
+      "[Explosive French Touch Drop]",
+      "[Slapped Bass and Guitar Groove]",
+      "[Sweeping Phased Breakdown]",
+      "[Full Pumping Dance Climax]",
+      "[DJ Filter Outro]"
+    ],
+    [
+      "[Four On The Floor Kick Intro]",
+      "[Funky Bassline Groove Entry]",
+      "[Bright Brass Synth Hook]",
+      "[Rising White Noise Build-up]",
+      "[High-Energy Disco Electro Drop]",
+      "[Stripped Percussion Bridge]",
+      "[Abrupt Stomp End]"
+    ],
+    [
+      "[Electric Piano Chord Intro]",
+      "[Shuffling Hi-Hat and Rimshot Build]",
+      "[Main Filtered Electro Groove]",
+      "[Virtuosic Synth Lead Solo]",
+      "[Sidechained Pad Breakdown]",
+      "[Euphoric Key-Modulated Climax]",
+      "[Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19972001
+}

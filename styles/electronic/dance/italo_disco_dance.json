@@ -1,0 +1,43 @@
+{
+  "id": "italo_disco_dance",
+  "choices": {
+    "bpm": [118, 122, 126],
+    "lead": [
+      "bright analog synth brass stabs and shimmering octave lead",
+      "spacey bell synth melodies and sweeping polyphonic pads",
+      "twangy electric guitar rhythm and crystalline FM synth bells"
+    ]
+  },
+  "style": "{bpm} bpm, Italo disco, 80s space dance, retro Eurodisco, {lead}, rolling relentless octave synthesizer bassline, gated LinnDrum snare and driving electronic tom fills, neon Mediterranean nightclub aesthetic, euphoric, nostalgic dance groove, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Space Ambient Arpeggio Intro]",
+      "[Pumping Octave Bassline Entry]",
+      "[Driving Electronic Drum Beat Drop]",
+      "[Bright Synth Brass Main Theme]",
+      "[Melodic Filter-Swept Breakdown]",
+      "[High-Energy Eurodance Climax]",
+      "[Echoing Delay Outro]"
+    ],
+    [
+      "[Gated Snare and Hi-Hat Count-in Intro]",
+      "[Rolling Analog Synth Bass Groove]",
+      "[Catchy Space Disco Lead Melody]",
+      "[Dynamic Tom Fill Build-up]",
+      "[Explosive Synth-Pop Dance Drop]",
+      "[Intimate Arpeggiated Bridge]",
+      "[Sudden Final Hit End]"
+    ],
+    [
+      "[Twinkling Bell Synth Intro]",
+      "[Rising White Noise and Drum Riser]",
+      "[Upbeat 80s Dance Floor Anthem]",
+      "[Counter-Melody Synth Brass Duet]",
+      "[Pulsing Stripped-Back Bass Breakdown]",
+      "[Grand Triumphant Finale]",
+      "[Slow Tape Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19831985
+}

@@ -1,0 +1,43 @@
+{
+  "id": "uk_garage_2step",
+  "choices": {
+    "bpm": [130, 132, 134, 136],
+    "lead": [
+      "lush lush Rhodes electric piano chords and sliced organ stabs",
+      "bright 90s digital piano riffs and pitched synth plucks",
+      "silky electric vibraphone and snappy Korg M1 organ bass"
+    ]
+  },
+  "style": "{bpm} bpm, UK garage, 2-step, classic speed garage, {lead}, skipping syncopated rimshots and swinging hi-hats, deep warbling Reese sub-bass, London underground club groove, energetic dance rhythm, warm punchy mix, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Atmospheric Vinyl Crackle and Rhodes Intro]",
+      "[Skipping 2-Step Hi-Hat and Rimshot Build]",
+      "[Bouncy Sub-Bass and Organ Drop]",
+      "[Syncopated Chord Stab Groove]",
+      "[Lush Warm Electric Piano Breakdown]",
+      "[High-Energy Speed Garage Climax]",
+      "[Reverberant Rimshot Fade Out]"
+    ],
+    [
+      "[Swinging Percussion Countdown Intro]",
+      "[Snappy M1 Organ Bassline Entry]",
+      "[Catchy Sliced Keyboard Hook]",
+      "[Tension Building Snare Roll]",
+      "[Heavy 2-Step Bass Drop]",
+      "[Stripped Sub-Bass Solo Interlude]",
+      "[Sudden Drop Cut End]"
+    ],
+    [
+      "[Sparse Muted Pluck Intro]",
+      "[Shuffling Garage Beat Entry]",
+      "[Warbling Reese Bass Groove]",
+      "[Melodic Synth Pluck Bridge]",
+      "[Filter Sweep and Cymbal Swell]",
+      "[Euphoric Club Anthem Climax]",
+      "[Echoing Chord Decay Outro]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 2000132
+}
