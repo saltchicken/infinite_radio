@@ -1,0 +1,43 @@
+{
+  "id": "mitsuda_prehistoric_tribal",
+  "choices": {
+    "bpm": [116, 124, 132, 140],
+    "lead": [
+      "breathy pan flute and lively wooden xylophone",
+      "energetic ocarina and resonant clay whistle",
+      "primitive bamboo flute and soaring solo violin"
+    ]
+  },
+  "style": "{bpm} bpm, Yasunori Mitsuda style, Chrono Trigger prehistoric 65,000,000 BC aesthetic, {lead}, driving polyrhythmic djembe and conga drums, wooden slit drums and log percussion, punchy acoustic upright bass, primeval campfire celebration, ancient savanna wilderness, spirited, earthy, high energy 90s JRPG adventure, warm organic acoustic space, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Rhythmic Slit Drum and Shaker Intro]",
+      "[Driving Djembe and Conga Polyrhythm Entry]",
+      "[Bouncy Upright Bass Ostinato]",
+      "[Lively Pan Flute Main Melody]",
+      "[Wooden Xylophone Rapid Run Breakdown]",
+      "[Full Tribal Ensemble Climax]",
+      "[Resonant Log Drum Stinger End]"
+    ],
+    [
+      "[Distant Campfire Percussion Roll Intro]",
+      "[Energetic Clay Whistle Call]",
+      "[Stomping Tribal Drum Groove Drop]",
+      "[Soaring Folk Violin Countermelody]",
+      "[Syncopated Woodblock and Flute Bridge]",
+      "[Frenzied Prehistoric Dance Finale]",
+      "[Abrupt Percussion Stop]"
+    ],
+    [
+      "[Solo Bamboo Flute Call Intro]",
+      "[Accelerating Hand Drum Build-up]",
+      "[Catchy Syncopated Village Theme]",
+      "[Playful Marimba and Flute Duet]",
+      "[Dynamic Percussion Solo Breakdown]",
+      "[Triumphant High-Tempo Crescendo]",
+      "[Fade Out]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 19950311
+}
