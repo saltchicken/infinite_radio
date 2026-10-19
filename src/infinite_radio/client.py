@@ -76,6 +76,9 @@ def build_api_payload(
         abc_str = original_abc
 
         if enable_bpm and target_bpm:
+            # Check if a tempo tag exists before replacement
+            has_tag = bool(re.search(r'(?:^Q:|\[Q:)', original_abc, flags=re.MULTILINE))
+            
             # Replace full-line Q: tags (e.g., "Q: 1/4=120" -> "Q: 1/4={target_bpm}")
             abc_str = re.sub(r'(^Q:[^=\n]*=?\s*)\d+', rf'\g<1>{target_bpm}', original_abc, flags=re.MULTILINE)
             # Replace inline Q: tags (e.g., "[Q: 120]" -> "[Q: {target_bpm}]")
@@ -83,6 +86,8 @@ def build_api_payload(
             
             if abc_str != original_abc:
                 client_logger.info(f"Tempo tags (Q:) forced to {target_bpm} BPM.")
+            elif has_tag:
+                client_logger.info(f"Tempo tags (Q:) already match target {target_bpm} BPM.")
             else:
                 client_logger.info("No tempo tags (Q:) found in the ABC file to overwrite.")
         elif strip_tempo:
