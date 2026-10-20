@@ -154,6 +154,17 @@
       display: none;
       font-weight: 600;
     }
+    .tag {
+      display: inline-block; background: #2d323e; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 6px; margin-bottom: 4px; color: var(--accent); cursor: pointer; border: 1px solid transparent;
+    }
+    .tag:hover {
+      text-decoration: line-through; border-color: var(--danger); color: var(--danger);
+    }
+    .tag-input {
+      background: transparent; border: 1px dashed var(--border); border-radius: 4px; outline: none; color: var(--text); font-size: 0.75rem; width: 75px; padding: 3px 6px;
+    }
+    .tag-input:focus { border-color: var(--accent); }
+    .tag-row-wrapper { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; }
   </style>
 </head>
 <body>
@@ -170,24 +181,34 @@
     </div>
 
     <div class="vote-row">
-      <div>
-        <small style="color:var(--muted)">Style:</small>
-        <div id="np-style" style="font-family:monospace; font-size:0.9rem;">—</div>
-      </div>
-      <div class="vote-btns">
-        <button onclick="sendVote('style', 'up')">⭐</button>
-        <button onclick="sendVote('style', 'down')">👎</button>
+      <div class="tag-row-wrapper">
+        <div style="display: flex; justify-content: space-between; width: 100%;">
+          <div><small style="color:var(--muted)">Style:</small> <span id="np-style" style="font-family:monospace; font-size:0.9rem;">—</span></div>
+          <div class="vote-btns">
+            <button onclick="sendVote('style', 'up')">⭐</button>
+            <button onclick="sendVote('style', 'down')">👎</button>
+          </div>
+        </div>
+        <div style="padding-left: 2px; width: 100%;">
+          <div id="style-tags-list" style="display:inline;"></div>
+          <input type="text" class="tag-input" id="style-tag-input" placeholder="+ tag" onkeypress="handleTagInput(event, 'style', this)" />
+        </div>
       </div>
     </div>
 
     <div class="vote-row">
-      <div>
-        <small style="color:var(--muted)">ABC Score:</small>
-        <div id="np-abc" style="font-family:monospace; font-size:0.9rem;">—</div>
-      </div>
-      <div class="vote-btns">
-        <button onclick="sendVote('abc', 'up')">⭐</button>
-        <button onclick="sendVote('abc', 'down')">👎</button>
+      <div class="tag-row-wrapper">
+        <div style="display: flex; justify-content: space-between; width: 100%;">
+          <div><small style="color:var(--muted)">ABC Score:</small> <span id="np-abc" style="font-family:monospace; font-size:0.9rem;">—</span></div>
+          <div class="vote-btns">
+            <button onclick="sendVote('abc', 'up')">⭐</button>
+            <button onclick="sendVote('abc', 'down')">👎</button>
+          </div>
+        </div>
+        <div style="padding-left: 2px; width: 100%;">
+          <div id="abc-tags-list" style="display:inline;"></div>
+          <input type="text" class="tag-input" id="abc-tag-input" placeholder="+ tag" onkeypress="handleTagInput(event, 'abc', this)" />
+        </div>
       </div>
     </div>
 
@@ -404,6 +425,7 @@
     let rawConfig = {};
     let isDraggingVolume = false;
     let playlistsData = {};
+    let currentTags = { style: [], abc: [] };
 
     function showToast(msg) {
       const t = document.getElementById("toast");
@@ -497,6 +519,13 @@
           styleList.appendChild(opt);
         });
       }
+      if (data.styles?.tags?.length) {
+        data.styles.tags.forEach(t => {
+          const opt = document.createElement("option");
+          opt.value = t;
+          styleList.appendChild(opt);
+        });
+      }
 
       // Populate ABC Datalist
       const abcList = document.getElementById("abc-list");
@@ -512,6 +541,13 @@
         data.abc.songs.forEach(s => {
           const opt = document.createElement("option");
           opt.value = s;
+          abcList.appendChild(opt);
+        });
+      }
+      if (data.abc?.tags?.length) {
+        data.abc.tags.forEach(t => {
+          const opt = document.createElement("option");
+          opt.value = t;
           abcList.appendChild(opt);
         });
       }
@@ -696,6 +732,38 @@
       }, 50); // 50ms debounce ensures smooth slider dragging
     }
 
+    function renderLiveTags(listId, newTags, feature) {
+      if (JSON.stringify(currentTags[feature]) === JSON.stringify(newTags)) return;
+      currentTags[feature] = newTags;
+
+      const list = document.getElementById(listId);
+      list.innerHTML = "";
+      newTags.forEach(tag => {
+        const el = document.createElement("span");
+        el.className = "tag";
+        el.textContent = `#${tag}`;
+        el.title = "Click to remove";
+        el.onclick = () => submitTagUpdate(feature, 'remove', tag);
+        list.appendChild(el);
+      });
+    }
+
+    async function handleTagInput(e, feature, inputEl) {
+      if (e.key === 'Enter') {
+        const val = inputEl.value.trim();
+        if (val) {
+          await submitTagUpdate(feature, 'add', val);
+          inputEl.value = "";
+        }
+      }
+    }
+
+    async function submitTagUpdate(feature, action, tag) {
+      const res = await fetch("/api/tag", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feature, action, tag }) });
+      if (!res.ok) { const data = await res.json(); showToast(data.detail || "Failed to update tag"); }
+      else if (action === "add") { loadOptions(); } // Refresh UI datalists with new tags silently
+    }
+
     function connectSSE() {
       const evtSource = new EventSource("/api/stream");
       
@@ -709,6 +777,9 @@
 
         currentPaused = state.paused;
         document.getElementById("pause-btn").textContent = currentPaused ? "▶️ Resume" : "⏸️ Pause";
+        
+        renderLiveTags("style-tags-list", state.style_tags || [], "style");
+        renderLiveTags("abc-tags-list", state.abc_tags || [], "abc");
         
         // Prevent volume slider from jumping around if the user is actively sliding it
         if (!isDraggingVolume) {

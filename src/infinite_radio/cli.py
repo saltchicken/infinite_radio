@@ -91,7 +91,24 @@ def load_config(config_path: Path) -> dict:
 def _resolve_style_files(active_styles: list[str], base_dir: Path) -> list[Path]:
     """Scans the filesystem for matching style .json files."""
     style_files = []
+    db_path = base_dir / "votes.db"
+    
     for style_req in active_styles:
+        if style_req.startswith("#"):
+            tag = style_req[1:].strip().lower()
+            if db_path.exists():
+                try:
+                    with sqlite3.connect(db_path) as conn:
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT file_path FROM file_tags WHERE type='style' AND tag=?", (tag,))
+                        for row in cursor.fetchall():
+                            p = Path(row[0])
+                            if p.exists():
+                                style_files.append(p)
+                except Exception as e:
+                    main_logger.warning(f"Failed to load style tags from database: {e}")
+            continue
+            
         style_path = (base_dir / style_req) if not Path(style_req).is_absolute() else Path(style_req)
         if style_path.is_dir():
             style_files.extend(style_path.rglob("*.json"))
@@ -131,6 +148,22 @@ def _resolve_abc_files(
                     main_logger.warning(f"Failed to load favorites from database: {e}")
             else:
                 main_logger.warning("Favorites DB does not exist yet. Vote up some ABCs first!")
+            continue
+            
+        if abc_req.startswith("#"):
+            tag = abc_req[1:].strip().lower()
+            if db_path.exists():
+                try:
+                    with sqlite3.connect(db_path) as conn:
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT file_path FROM file_tags WHERE type='abc' AND tag=?", (tag,))
+                        for row in cursor.fetchall():
+                            p = Path(row[0])
+                            if p.exists() and p not in seen:
+                                seen.add(p)
+                                abc_files.append(p)
+                except Exception as e:
+                    main_logger.warning(f"Failed to load abc tags from database: {e}")
             continue
 
         # Standard file path resolution

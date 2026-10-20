@@ -45,6 +45,12 @@ class SavePlaylistPayload(BaseModel):
     playlist: PlaylistData
 
 
+class TagUpdatePayload(BaseModel):
+    feature: str
+    action: str  # 'add' or 'remove'
+    tag: str
+
+
 def _format_short_path(raw_path: str | None, is_abc: bool = False) -> str | None:
     """Formats a full path into 'parent_folder/filename' without extensions for clean mobile display."""
     if not raw_path:
@@ -164,6 +170,14 @@ def create_remote_api(
                     cot TEXT
                 )
             ''')
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS file_tags (
+                    file_path TEXT,
+                    type TEXT,
+                    tag TEXT,
+                    PRIMARY KEY (file_path, tag)
+                )
+            ''')
             conn.commit()
     except Exception as e:
         api_logger.error(f"Failed to initialize SQLite database: {e}")
@@ -213,6 +227,19 @@ def create_remote_api(
         
         # Inject the virtual favorites directory at the top of the collections list
         abc_info["collections"].insert(0, "⭐ Favorites (SQLite)")
+
+        style_tags = []
+        abc_tags = []
+        try:
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+                style_tags = [f"#{row[0]}" for row in cursor.execute("SELECT DISTINCT tag FROM file_tags WHERE type='style'").fetchall()]
+                abc_tags = [f"#{row[0]}" for row in cursor.execute("SELECT DISTINCT tag FROM file_tags WHERE type='abc'").fetchall()]
+        except Exception:
+            pass
+
+        styles_info["tags"] = sorted(style_tags)
+        abc_info["tags"] = sorted(abc_tags)
 
         result = {
             "loras": loras,
@@ -355,12 +382,26 @@ def create_remote_api(
                 style_name = _format_short_path(metadata.get("_source_style"), is_abc=False)
                 abc_name = _format_short_path(metadata.get("_source_abc"), is_abc=True)
 
+                style_tags = []
+                abc_tags = []
+                try:
+                    with sqlite3.connect(db_path) as conn:
+                        cursor = conn.cursor()
+                        if metadata.get("_source_style"):
+                            style_tags = [r[0] for r in cursor.execute("SELECT tag FROM file_tags WHERE file_path=?", (metadata.get("_source_style"),)).fetchall()]
+                        if metadata.get("_source_abc"):
+                            abc_tags = [r[0] for r in cursor.execute("SELECT tag FROM file_tags WHERE file_path=?", (metadata.get("_source_abc"),)).fetchall()]
+                except Exception:
+                    pass
+
                 state = {
                     "volume": vol,
                     "paused": paused,
                     "track": track_name,
                     "style": style_name,
                     "abc": abc_name,
+                    "style_tags": style_tags,
+                    "abc_tags": abc_tags,
                     "queued": play_queue.qsize(),
                 }
                 
@@ -384,12 +425,26 @@ def create_remote_api(
         style_name = _format_short_path(metadata.get("_source_style"), is_abc=False)
         abc_name = _format_short_path(metadata.get("_source_abc"), is_abc=True)
 
+        style_tags = []
+        abc_tags = []
+        try:
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+                if metadata.get("_source_style"):
+                    style_tags = [r[0] for r in cursor.execute("SELECT tag FROM file_tags WHERE file_path=?", (metadata.get("_source_style"),)).fetchall()]
+                if metadata.get("_source_abc"):
+                    abc_tags = [r[0] for r in cursor.execute("SELECT tag FROM file_tags WHERE file_path=?", (metadata.get("_source_abc"),)).fetchall()]
+        except Exception:
+            pass
+
         return {
             "volume": vol,
             "paused": paused,
             "track": track_name,
             "style": style_name,
             "abc": abc_name,
+            "style_tags": style_tags,
+            "abc_tags": abc_tags,
             "queued": play_queue.qsize(),
         }
 
@@ -505,5 +560,36 @@ def create_remote_api(
         except Exception as e:
             api_logger.error(f"❌ Failed to process vote: {e}")
             raise HTTPException(status_code=500, detail="Vote failed")
+
+    @app.post("/api/tag")
+    def update_tag(payload: TagUpdatePayload):
+        if payload.feature not in ["style", "abc"]:
+            raise HTTPException(status_code=400, detail="Invalid feature")
+        
+        metadata = playback_info.get("metadata")
+        if not metadata:
+            raise HTTPException(status_code=400, detail="No track playing")
+
+        file_path = metadata.get("_source_style") if payload.feature == "style" else metadata.get("_source_abc")
+        if not file_path:
+            raise HTTPException(status_code=400, detail=f"No {payload.feature} source file playing to tag")
+
+        tag_clean = payload.tag.strip().lower().lstrip("#")
+        if not tag_clean:
+            raise HTTPException(status_code=400, detail="Invalid tag")
+
+        try:
+            with sqlite3.connect(db_path) as conn:
+                if payload.action == "add":
+                    conn.execute("INSERT OR IGNORE INTO file_tags (file_path, type, tag) VALUES (?, ?, ?)", (file_path, payload.feature, tag_clean))
+                elif payload.action == "remove":
+                    conn.execute("DELETE FROM file_tags WHERE file_path=? AND type=? AND tag=?", (file_path, payload.feature, tag_clean))
+                conn.commit()
+            with options_cache_lock:
+                options_cache["data"] = None  # Bust cache so new tags appear in dropdowns
+            return {"status": "success"}
+        except Exception as e:
+            api_logger.error(f"Failed to update tag: {e}")
+            raise HTTPException(status_code=500, detail="Database error")
 
     return app
