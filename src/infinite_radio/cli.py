@@ -102,7 +102,10 @@ def _resolve_style_files(active_styles: list[str], base_dir: Path) -> list[Path]
                         cursor = conn.cursor()
                         cursor.execute("SELECT file_path FROM file_tags WHERE type='style' AND tag=?", (tag,))
                         for row in cursor.fetchall():
-                            p = Path(row[0])
+                            # Reconstruct the absolute path from the stored relative path
+                            saved_path = Path(row[0])
+                            p = saved_path if saved_path.is_absolute() else base_dir / saved_path
+                            
                             if p.exists():
                                 style_files.append(p)
                 except Exception as e:
@@ -140,7 +143,9 @@ def _resolve_abc_files(
                         cursor = conn.cursor()
                         cursor.execute("SELECT file_path FROM favorite_abcs")
                         for row in cursor.fetchall():
-                            f_path = Path(row[0])
+                            saved_path = Path(row[0])
+                            f_path = saved_path if saved_path.is_absolute() else base_dir / saved_path
+                            
                             if f_path.exists() and f_path not in seen:
                                 seen.add(f_path)
                                 abc_files.append(f_path)
@@ -158,7 +163,9 @@ def _resolve_abc_files(
                         cursor = conn.cursor()
                         cursor.execute("SELECT file_path FROM file_tags WHERE type='abc' AND tag=?", (tag,))
                         for row in cursor.fetchall():
-                            p = Path(row[0])
+                            saved_path = Path(row[0])
+                            p = saved_path if saved_path.is_absolute() else base_dir / saved_path
+                            
                             if p.exists() and p not in seen:
                                 seen.add(p)
                                 abc_files.append(p)
@@ -335,7 +342,13 @@ def main():
 
                 if style_cache_files:
                     chosen_style = smart_choice(style_cache_files, style_history, max_memory=4)
-                    chosen_style_path = str(chosen_style)
+                    
+                    # Convert to a clean, OS-agnostic relative path for DB portability
+                    if chosen_style.is_relative_to(base_dir):
+                        chosen_style_path = chosen_style.relative_to(base_dir).as_posix()
+                    else:
+                        chosen_style_path = chosen_style.as_posix()
+
                     try:
                         style_data = json.loads(chosen_style.read_text(encoding="utf-8"))
                     except OSError as e:
@@ -387,7 +400,12 @@ def main():
                     else:
                         chosen_abc = smart_choice(abc_cache_files, abc_history, max_memory=15)
 
-                    chosen_abc_path = str(chosen_abc)
+                    # Convert to a clean, OS-agnostic relative path for DB portability
+                    if chosen_abc.is_relative_to(base_dir):
+                        chosen_abc_path = chosen_abc.relative_to(base_dir).as_posix()
+                    else:
+                        chosen_abc_path = chosen_abc.as_posix()
+
                     try:
                         raw_abc = chosen_abc.read_text(encoding="utf-8")
                     except OSError as e:
