@@ -1,0 +1,38 @@
+{
+  "id": "baroque_harpsichord",
+  "choices": {
+    "bpm": [80, 90, 100, 110],
+    "lead": [
+      "solo harpsichord",
+      "harpsichord and cello continuo",
+      "harpsichord and baroque flute"
+    ]
+  },
+  "style": "{bpm} bpm, baroque classical, chamber music, {lead}, intricate counterpoint, elegant ornamentation, acoustic, historical tuning, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Elegant Intro]",
+      "[Contrapuntal Development]",
+      "[Main Theme]",
+      "[Minor Key Bridge]",
+      "[Climactic Flourish]",
+      "[Stately Outro]"
+    ],
+    [
+      "[Slow Arpeggiated Prelude]",
+      "[Fugue Entry]",
+      "[Intertwining Melodies]",
+      "[Rapid Trills]",
+      "[Grand Cadence]"
+    ],
+    [
+      "[Dance Suite Opening]",
+      "[Rhythmic Motif]",
+      "[Harmonic Shift]",
+      "[Virtuosic Solo]",
+      "[Final Chord Resolution]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 17501750
+}
