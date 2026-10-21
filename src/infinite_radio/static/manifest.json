@@ -2,7 +2,8 @@
   "name": "Infinite Radio Remote",
   "short_name": "Radio UI",
   "start_url": "/",
-  "display": "standalone",
+  "scope": "/",
+  "display": "fullscreen",
   "background_color": "#111318",
   "theme_color": "#111318",
   "icons": [
