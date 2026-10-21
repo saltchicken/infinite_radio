@@ -197,6 +197,41 @@ def create_remote_api(
             raise HTTPException(status_code=404, detail="Web UI template not found")
         return FileResponse(html_path)
 
+    @app.get("/manifest.json")
+    def serve_manifest():
+        manifest_path = Path(__file__).parent / "static" / "manifest.json"
+        if manifest_path.exists():
+            return FileResponse(manifest_path)
+        raise HTTPException(status_code=404, detail="Manifest not found")
+
+    @app.get("/icon.png")
+    def serve_icon():
+        icon_path = Path(__file__).parent / "static" / "icon.png"
+        if icon_path.exists():
+            return FileResponse(icon_path)
+        raise HTTPException(status_code=404, detail="Icon not found")
+
+    @app.get("/icon192.png")
+    def serve_icon192():
+        icon_path = Path(__file__).parent / "static" / "icon192.png"
+        if icon_path.exists():
+            return FileResponse(icon_path)
+        raise HTTPException(status_code=404, detail="Icon not found")
+
+    @app.get("/screenshot-mobile.png")
+    def serve_screenshot_mobile():
+        img_path = Path(__file__).parent / "static" / "screenshot-mobile.png"
+        if img_path.exists():
+            return FileResponse(img_path)
+        raise HTTPException(status_code=404, detail="Screenshot not found")
+
+    @app.get("/screenshot-desktop.png")
+    def serve_screenshot_desktop():
+        img_path = Path(__file__).parent / "static" / "screenshot-desktop.png"
+        if img_path.exists():
+            return FileResponse(img_path)
+        raise HTTPException(status_code=404, detail="Screenshot not found")
+
     @app.get("/api/options")
     def get_options(refresh: bool = False):
         """Auto-discovers available LoRAs, style folders/files, and ABC directories for the Web UI."""
