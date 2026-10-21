@@ -275,7 +275,7 @@
       </div>
 
       <div class="status-row" style="margin-bottom: 14px;">
-        <span style="font-size: 0.85rem; color: var(--muted);">Configure styles, ABC scores, and LoRAs.</span>
+        <span style="font-size: 0.85rem; color: var(--muted);">Configure styles and ABC scores.</span>
         <button onclick="refreshDiscovery()" style="padding: 5px 10px; font-size: 0.8rem;">🔄 Refresh Directories</button>
       </div>
 
@@ -320,20 +320,19 @@
         </div>
       </div>
 
-      <div class="grid-2">
-        <div class="field">
-          <label>ABC Base Directory</label>
-          <input type="text" id="abc-base-dir" value="sheetsage/output" />
-        </div>
-        <div class="field">
-          <label>Strip ABC Tempo (Q: tags)</label>
-          <select id="strip-abc-tempo">
-            <option value="true">✅ Enabled</option>
-            <option value="false">❌ Disabled</option>
-          </select>
-        </div>
+      <div class="field">
+        <label>ABC Base Directory</label>
+        <input type="text" id="abc-base-dir" value="sheetsage/output" />
       </div>
+    </div>
+  </details>
 
+  <!-- Collapsible BPM Settings -->
+  <details class="card">
+    <summary style="font-size: 1.1rem; font-weight: bold; cursor: pointer; user-select: none; outline: none;">
+      🥁 BPM & Tempo Control
+    </summary>
+    <div style="margin-top: 16px;">
       <div class="grid-2">
         <div class="field">
           <label>BPM Modification</label>
@@ -351,11 +350,28 @@
         </div>
       </div>
 
-      <div class="field">
-        <label>BPM Override (Empty = Auto)</label>
-        <input type="number" id="bpm-override" placeholder="e.g. 120" min="1" max="999" />
+      <div class="grid-2">
+        <div class="field">
+          <label>BPM Override (Empty = Auto)</label>
+          <input type="number" id="bpm-override" placeholder="e.g. 120" min="1" max="999" />
+        </div>
+        <div class="field">
+          <label>Strip ABC Tempo (Q: tags)</label>
+          <select id="strip-abc-tempo">
+            <option value="true">✅ Enabled</option>
+            <option value="false">❌ Disabled</option>
+          </select>
+        </div>
       </div>
+    </div>
+  </details>
 
+  <!-- Collapsible LoRA Settings -->
+  <details class="card">
+    <summary style="font-size: 1.1rem; font-weight: bold; cursor: pointer; user-select: none; outline: none;">
+      🧬 LoRA Weights
+    </summary>
+    <div style="margin-top: 16px;">
       <div class="grid-2">
         <div class="field">
           <label>AR LoRA</label>
