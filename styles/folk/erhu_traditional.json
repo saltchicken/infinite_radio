@@ -1,0 +1,41 @@
+{
+  "id": "erhu_traditional",
+  "choices": {
+    "bpm": [60, 65, 70, 75],
+    "accompaniment": [
+      "guzheng",
+      "bamboo flute",
+      "yangqin",
+      "soft orchestral strings"
+    ]
+  },
+  "style": "{bpm} bpm, traditional chinese folk, erhu lead, {accompaniment} accompaniment, expressive bowing, melancholic and beautiful, acoustic, purely instrumental, zero vocals.",
+  "lyrics": [
+    [
+      "[Gentle Erhu Intro]",
+      "[Plucked Arpeggios]",
+      "[Expressive Erhu Melody]",
+      "[Soft Bridge]",
+      "[Emotional Erhu Climax]",
+      "[Fading Outro]"
+    ],
+    [
+      "[Atmospheric Intro]",
+      "[Slow Erhu Theme]",
+      "[Woodwind and Erhu Duet]",
+      "[Tension Building Bridge]",
+      "[Passionate Bowing]",
+      "[Sustained Note Outro]"
+    ],
+    [
+      "[Plucked Strings Intro]",
+      "[Sorrowful Erhu Entry]",
+      "[Flowing Melody]",
+      "[Dynamic Shift]",
+      "[High Register Erhu Solo]",
+      "[Peaceful Resolution]"
+    ]
+  ],
+  "cot": "full",
+  "seed": 888888
+}
