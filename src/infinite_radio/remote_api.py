@@ -27,6 +27,7 @@ class ConfigUpdatePayload(BaseModel):
 class DSPUpdatePayload(BaseModel):
     enable_normalization: bool
     enable_reverb: bool
+    reverb_preset: str
     reverb_room_size: float
     reverb_damping: float
     reverb_wet_level: float
@@ -324,6 +325,7 @@ def create_remote_api(
         with config_lock:
             shared_state["enable_normalization"] = payload.enable_normalization
             shared_state["enable_reverb"] = payload.enable_reverb
+            shared_state["reverb_preset"] = payload.reverb_preset
             shared_state["reverb_room_size"] = payload.reverb_room_size
             shared_state["reverb_damping"] = payload.reverb_damping
             shared_state["reverb_wet_level"] = payload.reverb_wet_level

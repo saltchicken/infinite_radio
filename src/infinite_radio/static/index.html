@@ -427,12 +427,26 @@
 
       <hr style="border-color: var(--border); margin: 16px 0;" />
 
-      <div class="field">
-        <label>Reverb Effect</label>
-        <select id="enable-reverb" onchange="liveDSPUpdate()">
-          <option value="true">✅ Enabled</option>
-          <option value="false">❌ Disabled</option>
-        </select>
+      <div class="grid-2">
+        <div class="field">
+          <label>Reverb Effect</label>
+          <select id="enable-reverb" onchange="liveDSPUpdate()">
+            <option value="true">✅ Enabled</option>
+            <option value="false">❌ Disabled</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Reverb Preset</label>
+          <select id="reverb-preset" onchange="liveDSPUpdate()">
+            <option value="abbey_road">🇬🇧 Abbey Road (Pro)</option>
+            <option value="lush_hall">🏛️ Lush Hall (Wide)</option>
+            <option value="studio_plate">🎙️ Studio Plate (Vintage)</option>
+            <option value="ethereal_space">✨ Ethereal Space (Delay+Swirl)</option>
+            <option value="lofi_tape_room">📼 Lo-Fi Tape Room (Warble)</option>
+            <option value="slapback_chamber">🎸 Slapback Chamber</option>
+            <option value="raw_reverb">📦 Raw (Unfiltered)</option>
+          </select>
+        </div>
       </div>
 
       <div class="grid-2">
@@ -636,6 +650,7 @@
       // Map DSP and Post-Processing config state
       document.getElementById("enable-normalization").value = rawConfig.enable_normalization !== false ? "true" : "false";
       document.getElementById("enable-reverb").value = rawConfig.enable_reverb !== false ? "true" : "false";
+      document.getElementById("reverb-preset").value = rawConfig.reverb_preset || "abbey_road";
       document.getElementById("target-lufs").value = rawConfig.target_lufs ?? -14.0;
       document.getElementById("reverb-room").value = rawConfig.reverb_room_size ?? 0.3;
       document.getElementById("reverb-damping").value = rawConfig.reverb_damping ?? 0.5;
@@ -667,6 +682,7 @@
         // Read DSP state out of the UI
         enable_normalization: document.getElementById("enable-normalization").value === "true",
         enable_reverb: document.getElementById("enable-reverb").value === "true",
+        reverb_preset: document.getElementById("reverb-preset").value,
         target_lufs: parseFloat(document.getElementById("target-lufs").value),
         reverb_room_size: parseFloat(document.getElementById("reverb-room").value),
         reverb_damping: parseFloat(document.getElementById("reverb-damping").value),
@@ -769,6 +785,7 @@
         const payload = {
           enable_normalization: document.getElementById("enable-normalization").value === "true",
           enable_reverb: document.getElementById("enable-reverb").value === "true",
+          reverb_preset: document.getElementById("reverb-preset").value,
           reverb_room_size: parseFloat(document.getElementById("reverb-room").value),
           reverb_damping: parseFloat(document.getElementById("reverb-damping").value),
           reverb_wet_level: parseFloat(document.getElementById("reverb-wet").value),

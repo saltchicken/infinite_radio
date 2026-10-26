@@ -57,6 +57,7 @@ DEFAULT_STATE = {
     # DSP Settings
     "enable_normalization": True,
     "enable_reverb": True,
+    "reverb_preset": "abbey_road",
     "reverb_room_size": 0.3,
     "reverb_damping": 0.5,
     "reverb_wet_level": 0.15,

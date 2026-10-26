@@ -2,10 +2,9 @@ import queue
 import numpy as np
 import sounddevice as sd
 import logging
-from pedalboard import Pedalboard, Reverb, HighpassFilter, LowpassFilter, Chorus
+from pedalboard import Pedalboard, Reverb, HighpassFilter, LowpassFilter, Chorus, Delay, Phaser
 
 player_logger = logging.getLogger("Player")
-
 
 def audio_player(
     play_queue,
@@ -23,16 +22,48 @@ def audio_player(
 
     # Persistent DSP objects to maintain reverb tails across chunks
     # 1. Set the reverb itself to 100% wet / 0% dry so we can mix it manually later
-    reverb = Reverb(room_size=0.3, damping=0.5, wet_level=1.0, dry_level=0.0)
+    reverb_core = Reverb(room_size=0.3, damping=0.5, wet_level=1.0, dry_level=0.0)
     
-    # 2. The "Abbey Road Trick": EQ the wet signal BEFORE it hits the reverb
-    # 3. Add subtle chorus AFTER the reverb for a lush, wide tail
-    wet_board = Pedalboard([
-        HighpassFilter(cutoff_frequency_hz=500.0),
-        LowpassFilter(cutoff_frequency_hz=10000.0),
-        reverb,
-        Chorus(rate_hz=0.5, depth=0.1, centre_delay_ms=7.0, feedback=0.0, mix=0.3)
-    ])
+    # 2. Define multiple routing chains (presets) utilizing the same shared reverb core
+    presets = {
+        "abbey_road": Pedalboard([
+            HighpassFilter(cutoff_frequency_hz=500.0),
+            LowpassFilter(cutoff_frequency_hz=10000.0),
+            reverb_core,
+            Chorus(rate_hz=0.5, depth=0.1, centre_delay_ms=7.0, feedback=0.0, mix=0.3)
+        ]),
+        "lush_hall": Pedalboard([
+            HighpassFilter(cutoff_frequency_hz=200.0),
+            reverb_core,
+            Chorus(rate_hz=0.2, depth=0.2, centre_delay_ms=10.0, feedback=0.1, mix=0.4)
+        ]),
+        "studio_plate": Pedalboard([
+            HighpassFilter(cutoff_frequency_hz=100.0),
+            LowpassFilter(cutoff_frequency_hz=6000.0),
+            reverb_core
+        ]),
+        "ethereal_space": Pedalboard([
+            HighpassFilter(cutoff_frequency_hz=300.0),
+            LowpassFilter(cutoff_frequency_hz=8000.0),
+            Delay(delay_seconds=0.4, feedback=0.3, mix=0.4),
+            reverb_core,
+            Phaser(rate_hz=0.1, depth=0.5, centre_frequency_hz=1000.0, feedback=0.2, mix=0.3)
+        ]),
+        "lofi_tape_room": Pedalboard([
+            HighpassFilter(cutoff_frequency_hz=400.0),
+            LowpassFilter(cutoff_frequency_hz=3500.0),
+            reverb_core,
+            Chorus(rate_hz=1.5, depth=0.4, centre_delay_ms=5.0, feedback=0.0, mix=0.8)
+        ]),
+        "slapback_chamber": Pedalboard([
+            HighpassFilter(cutoff_frequency_hz=200.0),
+            Delay(delay_seconds=0.08, feedback=0.0, mix=0.5),
+            reverb_core
+        ]),
+        "raw_reverb": Pedalboard([
+            reverb_core
+        ])
+    }
 
     def stream_write_interruptible(audio_data, chunk_frames, current_fs):
         for i in range(0, len(audio_data), chunk_frames):
@@ -75,8 +106,11 @@ def audio_player(
                 volume = float(shared_state.get("volume", 0.4))
                 enable_reverb = shared_state.get("enable_reverb", True)
                 if enable_reverb:
-                    reverb.room_size = float(shared_state.get("reverb_room_size", 0.3))
-                    reverb.damping = float(shared_state.get("reverb_damping", 0.5))
+                    reverb_preset = shared_state.get("reverb_preset", "abbey_road")
+                    active_board = presets.get(reverb_preset, presets["abbey_road"])
+                    
+                    reverb_core.room_size = float(shared_state.get("reverb_room_size", 0.3))
+                    reverb_core.damping = float(shared_state.get("reverb_damping", 0.5))
                     # Read the UI mix levels, but we'll apply them manually to the parallel paths
                     current_wet_level = float(shared_state.get("reverb_wet_level", 0.15))
                     current_dry_level = float(shared_state.get("reverb_dry_level", 0.85))
@@ -86,11 +120,10 @@ def audio_player(
 
             # 3. Apply live Reverb chunk-by-chunk in a parallel Aux routing style
             if enable_reverb:
-                # Pedalboard expects (channels, samples) so we transpose (.T)
-                # Process the wet signal chain independently
-                wet_chunk = wet_board(chunk.T, current_fs, reset=False).T
+                # Process the wet signal chain independently using the selected preset
+                wet_chunk = active_board(chunk.T, current_fs, reset=False).T
                 
-                # Merge the pristine dry signal with the EQ'd and chorused wet tail
+                # Merge the pristine dry signal with the EQ'd/chorused wet tail
                 chunk = (chunk * current_dry_level) + (wet_chunk * current_wet_level)
                 
                 # Hard limit to prevent extreme reverb resonance from clipping the output

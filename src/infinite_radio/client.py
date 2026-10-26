@@ -41,6 +41,7 @@ EPHEMERAL_KEYS = (
     "_enable_bpm",
     "enable_normalization",
     "enable_reverb",
+    "reverb_preset",  # <-- ADDED THIS
     "reverb_room_size",
     "reverb_damping",
     "reverb_wet_level",
